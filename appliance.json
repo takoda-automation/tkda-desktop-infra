@@ -42,8 +42,8 @@
     {
       "name": "desktop-cli",
       "repo": "takoda-automation/tkda-desktop-cli",
-      "rev": "6dd6d1b0279e21a5a904419c7a4e9dcec4e6e9fa",
-      "pull_request": 1,
+      "rev": "b834365b73b11e047847895cbeced51e45f692ef",
+      "merged_pull_request": 1,
       "kind": "rust-binary"
     },
     {
