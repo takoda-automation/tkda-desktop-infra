@@ -1,0 +1,82 @@
+{
+  "$schema": "https://raw.githubusercontent.com/scintilla-run/scintilla-desktop-infra/main/manifests/local-runtime.schema.json",
+  "schema": "scintilla.desktop-runtime/v1",
+  "runtime_kind": "scintilla-single-beam",
+  "ingress": {
+    "command": {
+      "program": "/opt/scintilla/ingress/bin/scintilla_ingress",
+      "args": ["foreground"],
+      "cwd": "/opt/scintilla/ingress",
+      "env": {
+        "SCINTILLA_LISTEN": "127.0.0.1:8091"
+      }
+    },
+    "stop": {
+      "command": {
+        "program": "/opt/scintilla/ingress/bin/scintilla_ingress",
+        "args": ["stop"],
+        "cwd": "/opt/scintilla/ingress"
+      },
+      "timeout_seconds": 15
+    },
+    "release_command": "/opt/scintilla/ingress/bin/scintilla_ingress"
+  },
+  "workers": [
+    {
+      "id": "tkda-local-supervisor",
+      "runtime": "rust",
+      "mode": "host",
+      "command": {
+        "program": "/opt/takoda/bin/tkda-main-server",
+        "args": [],
+        "cwd": "/opt/takoda/runtime",
+        "env": {
+          "TKDA_BIND": "127.0.0.1:18088",
+          "TKDA_EXECUTION_ROLE": "desktop",
+          "TKDA_AGENT_ID": "replace-at-install-with-device-id",
+          "TKDA_ALLOW_HEADED": "true",
+          "TKDA_TYPESCRIPT_WORKER_CMD": "node",
+          "TKDA_TYPESCRIPT_WORKER_ENTRY": "/opt/takoda/browser-workers/dist/worker.js",
+          "TKDA_PYTHON_WORKER_CMD": "python3",
+          "TKDA_PYTHON_WORKER_ENTRY": "/opt/takoda/workers/python/tkda_worker.py",
+          "TKDA_GO_WORKER_CMD": "/opt/takoda/workers/go/tkda-go-worker",
+          "TKDA_RUST_WORKER_CMD": "/opt/takoda/workers/rust/tkda-rust-worker",
+          "TKDA_SELENIUM_UPSTREAM_URL": "http://127.0.0.1:9515"
+        }
+      },
+      "stop": {
+        "timeout_seconds": 20
+      }
+    },
+    {
+      "id": "tkda-selenium-node",
+      "runtime": "javascript",
+      "mode": "host",
+      "command": {
+        "program": "node",
+        "args": ["/opt/takoda/browser-workers/dist/selenium-node.js"],
+        "cwd": "/opt/takoda/browser-workers",
+        "env": {
+          "TKDA_CHROMEDRIVER_CMD": "chromedriver",
+          "TKDA_CHROMEDRIVER_PORT": "9515"
+        }
+      },
+      "stop": {
+        "timeout_seconds": 10
+      }
+    }
+  ],
+  "tunnel": null,
+  "preferences": {
+    "keep_scintilla_alive_during_lock_screen": false
+  },
+  "control_plane": {
+    "protocol": "scintilla.local-control/v1",
+    "clients": [
+      {
+        "kind": "infra",
+        "capabilities": ["runtime.reconcile", "worker.control"]
+      }
+    ]
+  }
+}
