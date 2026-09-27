@@ -1,0 +1,27 @@
+version = 1
+runtime_kind = "takoda-browser-automation-host"
+manifest = "manifests/local-runtime.json"
+
+[control_plane]
+daemon_url = "http://127.0.0.1:18087"
+loopback_only = true
+cloud_leases = true
+cli_via_daemon = true
+infra_reconciliation = true
+
+[execution]
+allowed_worker_languages = ["typescript", "python", "go", "rust"]
+allowed_browser_backends = ["selenium", "playwright", "puppeteer"]
+allow_browser_sidecars = true
+allow_host_workers = true
+allow_container_workers = true
+allowed_container_engines = ["docker", "podman"]
+
+[policy]
+allow_headed = true
+allow_headless = true
+allow_cloudflare_tunnel = true
+allow_mobile_agents = true
+allow_remote_shell = false
+allow_arbitrary_client_commands = false
+expose_browser_control_ports = false

@@ -1,0 +1,79 @@
+{
+  "$schema": "./local-runtime.schema.json",
+  "schema": "tkda.desktop-runtime/v1",
+  "runtime_kind": "takoda-browser-automation-host",
+  "control_plane": {
+    "schema": "tkda.local-control/v1",
+    "authority": "tkda-desktop-daemon",
+    "actors": [
+      "hosted-control-plane",
+      "tkda-cli",
+      "tkda-desktop-app.rs",
+      "tkda-flutter",
+      "tkda-desktop-infra"
+    ],
+    "operations": [
+      "daemon.status",
+      "daemon.capabilities",
+      "runtime.plan",
+      "runtime.reconcile",
+      "runtime.start",
+      "runtime.stop",
+      "run.create",
+      "run.status",
+      "run.cancel",
+      "run.driver",
+      "tunnel.status",
+      "tunnel.start",
+      "tunnel.stop",
+      "update.status",
+      "update.apply",
+      "logs.stream"
+    ],
+    "transport": {
+      "local": "authenticated-loopback",
+      "cloud": "authenticated-outbound"
+    }
+  },
+  "execution": {
+    "max_concurrency": 4,
+    "pairs": [
+      { "language": "typescript", "browser_backend": "playwright", "mode": "direct" },
+      { "language": "typescript", "browser_backend": "puppeteer", "mode": "direct" },
+      { "language": "typescript", "browser_backend": "selenium", "mode": "direct" },
+      { "language": "python", "browser_backend": "selenium", "mode": "direct" },
+      { "language": "go", "browser_backend": "selenium", "mode": "direct" },
+      { "language": "rust", "browser_backend": "selenium", "mode": "direct" },
+      { "language": "python", "browser_backend": "playwright", "mode": "sidecar" },
+      { "language": "go", "browser_backend": "puppeteer", "mode": "sidecar" }
+    ],
+    "browser_backends": {
+      "selenium": {
+        "mode": "sidecar",
+        "command": { "program": "chromedriver", "args": ["--port=9515"] },
+        "endpoint": "http://127.0.0.1:9515"
+      },
+      "playwright": {
+        "mode": "sidecar",
+        "command": {
+          "program": "node",
+          "args": ["../tkda-browser-workers.ts/dist/browser-sidecar.js", "--backend=playwright"]
+        },
+        "endpoint": null
+      },
+      "puppeteer": {
+        "mode": "sidecar",
+        "command": {
+          "program": "node",
+          "args": ["../tkda-browser-workers.ts/dist/browser-sidecar.js", "--backend=puppeteer"]
+        },
+        "endpoint": null
+      }
+    }
+  },
+  "tunnel": null,
+  "preferences": {
+    "keep_takoda_alive_during_lock_screen": false,
+    "default_headless": true
+  }
+}
