@@ -1,0 +1,29 @@
+{
+  "schema": "ores.desktop-appliance/v1",
+  "product": "takoda",
+  "channel": "candidate",
+  "orchestrator": {
+    "engine": "ores-compose",
+    "config": ".ores-compose.yaml",
+    "public_config": null,
+    "source_role": "desktop-daemon",
+    "shutdown_timeout_ms": 5000
+  },
+  "host": {
+    "trust_model": "developer-owned-trusted-host",
+    "daemon_listen": "127.0.0.1:18087",
+    "public_origin": null,
+    "requires_public_ip": false
+  },
+  "cloudflare": {
+    "mode": "not-required",
+    "credentials_in_repo": false,
+    "origin": null,
+    "hostname_template": null,
+    "ingress_paths": []
+  },
+  "update": {
+    "mode": "exact-revision",
+    "allow_mutable_latest": false
+  }
+}
