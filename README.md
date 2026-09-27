@@ -6,10 +6,9 @@ This repository is intentionally separate from the hosted Takoda control plane. 
 
 Implementation is developed through pull requests from this bootstrap commit.
 
-
 ## ORES Compose local deployment
 
-The standardized desktop lifecycle is now declared in `.ores-compose.yaml`:
+The audited local lifecycle is declared in `.ores-compose.yaml`:
 
 ```sh
 ores-compose check .ores-compose.yaml
@@ -17,4 +16,8 @@ ores-compose plan .ores-compose.yaml
 ores-compose up .ores-compose.yaml
 ```
 
-Where this product supports inbound public hosting, `.ores-compose.public.yaml` adds a remotely managed `cloudflared` connector using an OS-protected token file. A public/static/dedicated IP is not required. See [docs/local-deployment.md](docs/local-deployment.md).
+Takoda uses an outbound authenticated desktop-agent WebSocket, so no inbound Cloudflare Tunnel or public IP is required.
+
+The daemon source is exact-commit pinned, loopback-only, and executed from the built release binary. Stable promotion remains blocked until the daemon repository commits a Cargo lockfile and the build switches to `--locked`.
+
+See [docs/local-deployment.md](docs/local-deployment.md) and [appliance.json](appliance.json) for the audited boundary and promotion gates.
