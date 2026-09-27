@@ -20,10 +20,17 @@
     "credentials_in_repo": false,
     "origin": null,
     "hostname_template": null,
-    "ingress_paths": []
+    "ingress_paths": [],
+    "public_ingress_ready": false,
+    "origin_auth": "outbound-agent-only",
+    "promotion_reason": "Takoda uses an outbound authenticated WebSocket agent; inbound public tunnel is unnecessary."
   },
   "update": {
     "mode": "exact-revision",
     "allow_mutable_latest": false
+  },
+  "promotion_gates": {
+    "public_ingress_ready": false,
+    "daemon_lockfile_committed": false
   }
 }
