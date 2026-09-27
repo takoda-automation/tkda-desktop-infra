@@ -1,13 +1,25 @@
 version = 1
 runtime_kind = "takoda-browser-automation-host"
 manifest = "manifests/local-runtime.json"
+scintilla_manifest = "manifests/scintilla-runtime.json"
 
 [control_plane]
-daemon_url = "http://127.0.0.1:18087"
+takoda_daemon_url = "http://127.0.0.1:18087"
+takoda_supervisor_url = "http://127.0.0.1:18088"
 loopback_only = true
 cloud_leases = true
 cli_via_daemon = true
 infra_reconciliation = true
+
+[substrate]
+kind = "scintilla-desktop"
+repository = "scintilla-run/scintilla-desktop-infra"
+protocol = "scintilla.local-control/v1"
+daemon_url = "http://127.0.0.1:8765"
+ingress_url = "http://127.0.0.1:8091"
+manage_takoda_supervisor = true
+manage_selenium_node = true
+spawn_per_run_browser_workers = false
 
 [execution]
 allowed_worker_languages = ["typescript", "python", "go", "rust"]
@@ -25,3 +37,9 @@ allow_mobile_agents = true
 allow_remote_shell = false
 allow_arbitrary_client_commands = false
 expose_browser_control_ports = false
+
+[compatibility]
+# Scintilla owns long-lived process/container lifecycle. The Takoda local
+# supervisor owns per-run child workers because the current Takoda worker ABI
+# uses bounded stdin/stdout command/event streams.
+direct_daemon_supervisor_launch = "development-only"
