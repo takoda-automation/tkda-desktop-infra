@@ -10,4 +10,12 @@ services:
     runtime: host
     build:
       - ["cargo", "build", "--release"]
-    command: ["cargo", "run", "--release"]
+    command: ["./target/release/tkda-desktop-daemon"]
+    inherit_env:
+      - TKDA_AGENT_URL
+      - TKDA_AGENT_ID
+      - TKDA_AGENT_TOKEN_FILE
+      - TKDA_LOCAL_CONTROL_TOKEN_FILE
+    environment:
+      TKDA_LOCAL_CONTROL_BIND: "127.0.0.1:18087"
+      TKDA_LOCAL_SUPERVISOR_BIND: "127.0.0.1:18088"
