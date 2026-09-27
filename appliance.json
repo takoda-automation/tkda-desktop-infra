@@ -14,7 +14,7 @@
     {
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
-      "rev": "29272cb1073bb8ba887cbb410d6feff060f850c9",
+      "rev": "61ec7ca46fb5ad859c12583f9feece224c9c7089",
       "pull_request": 11,
       "kind": "rust-binary"
     },
@@ -28,7 +28,7 @@
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "774b17d467ab8b1202be062172d25edd856bd048",
+      "rev": "cbbf5b79d95cb12c0c29adb841a3f0c782193696",
       "pull_request": 12,
       "kind": "node-worker",
       "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
@@ -62,9 +62,9 @@
     "mutable_latest_releases": false
   },
   "promotion_gates": {
-    "scintilla_runtime_matches_current_desktop_infra_contract": false,
+    "scintilla_runtime_matches_current_desktop_infra_contract": true,
     "desktop_daemon_scintilla_adapter_green": false,
-    "desktop_cli_green": false,
+    "desktop_cli_green": true,
     "rust_desktop_app_green": false,
     "flutter_desktop_green": false,
     "playwright_local_smoke_green": false,
