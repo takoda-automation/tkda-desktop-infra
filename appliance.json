@@ -1,7 +1,15 @@
 {
   "schema": "tkda.desktop-appliance/v1",
   "channel": "candidate",
-  "promotion_gate": "all referenced component CI must be green before promotion",
+  "promotion_gate": "all referenced component CI and cross-repo desktop E2E must be green before promotion",
+  "substrate": {
+    "repo": "scintilla-run/scintilla-desktop-infra",
+    "rev": "4fe14263b2fa11ab7f13f3144701a491083bbce6",
+    "protocol": "scintilla.local-control/v1",
+    "daemon_url": "http://127.0.0.1:8765",
+    "ingress_url": "http://127.0.0.1:8091",
+    "status": "contract-pinned-runtime-candidate-not-yet-promoted"
+  },
   "components": [
     {
       "name": "desktop-daemon",
@@ -13,13 +21,21 @@
       "name": "main-supervisor",
       "repo": "takoda-automation/tkda-main-server.rs",
       "rev": "5cb682fb4d27932eeeb1dd98cf2f6a7c503df92e",
-      "kind": "rust-binary"
+      "kind": "rust-binary",
+      "runtime_role": "scintilla-managed-long-lived-worker"
     },
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
       "rev": "f408aef2c72228d219f8d0059b45fcda8748c097",
-      "kind": "node-worker"
+      "kind": "node-worker",
+      "runtime_role": "takoda-supervisor-managed-per-run-child"
+    },
+    {
+      "name": "selenium-server",
+      "repo": "takoda-automation/tkda-selenium-server",
+      "rev": "7ae290ccf970a443d46bba37aa1bdbed7699a299",
+      "kind": "rust-service"
     },
     {
       "name": "desktop-cli",
@@ -33,5 +49,23 @@
       "rev": "4fe14263b2fa11ab7f13f3144701a491083bbce6",
       "kind": "integration"
     }
-  ]
+  ],
+  "invariants": {
+    "takoda_clients_talk_only_to_tkda_desktop_daemon": true,
+    "scintilla_owns_long_lived_local_process_lifecycle": true,
+    "takoda_supervisor_owns_per_run_worker_protocol": true,
+    "browser_control_ports_loopback_only": true,
+    "arbitrary_remote_shell": false,
+    "mutable_latest_releases": false
+  },
+  "promotion_gates": {
+    "scintilla_runtime_matches_current_desktop_infra_contract": false,
+    "desktop_daemon_scintilla_adapter_green": false,
+    "desktop_cli_green": false,
+    "rust_desktop_app_green": false,
+    "flutter_desktop_green": false,
+    "playwright_local_smoke_green": false,
+    "puppeteer_local_smoke_green": false,
+    "selenium_local_smoke_green": false
+  }
 }
