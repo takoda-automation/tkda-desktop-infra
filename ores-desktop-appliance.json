@@ -1,0 +1,37 @@
+{
+  "schema": "ores.desktop-appliance/v1",
+  "product": "takoda",
+  "channel": "candidate",
+  "orchestrator": {
+    "engine": "ores-compose",
+    "config": ".ores-compose.yaml",
+    "public_config": null,
+    "source_role": "desktop-daemon",
+    "shutdown_timeout_ms": 5000
+  },
+  "host": {
+    "trust_model": "developer-owned-trusted-host",
+    "daemon_listen": "127.0.0.1:18087",
+    "public_origin": null,
+    "requires_public_ip": false
+  },
+  "cloudflare": {
+    "mode": "not-required",
+    "credentials_in_repo": false,
+    "origin": null,
+    "hostname_template": null,
+    "ingress_paths": [],
+    "public_ingress_ready": false,
+    "origin_auth": "outbound-agent-only",
+    "promotion_reason": "Takoda uses an outbound authenticated desktop-agent WebSocket; inbound public tunnel is unnecessary."
+  },
+  "update": {
+    "mode": "exact-revision",
+    "allow_mutable_latest": false
+  },
+  "promotion_gates": {
+    "daemon_lockfile_committed": false,
+    "public_ingress_ready": false,
+    "scintilla_substrate_in_compose_graph": false
+  }
+}

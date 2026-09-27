@@ -142,3 +142,17 @@ The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda d
 `tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. For Selenium, Scintilla separately owns the long-running `dist/selenium-node.js` wrapper, which launches raw ChromeDriver on loopback; the per-run worker connects through `TKDA_SELENIUM_UPSTREAM_URL=http://127.0.0.1:9515`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
 
 The candidate channel intentionally pins unmerged desktop-control commits while this implementation wave is under review. Do not promote those pins to a stable appliance until the referenced PR CI is green.
+
+## ORES Compose local daemon lifecycle
+
+The standardized ORES Compose projection is additive to the native Takoda/Scintilla appliance; it does not replace the Scintilla substrate.
+
+```sh
+ores-compose check .ores-compose.yaml
+ores-compose plan .ores-compose.yaml
+ores-compose up .ores-compose.yaml
+```
+
+The compose manifest pins the same `tkda-desktop-daemon` revision as native `appliance.json`, requires agent/local-control token **file paths**, binds only to loopback, and sets `TKDA_LAUNCH_SUPERVISOR=false` so Scintilla remains the long-lived process owner.
+
+Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. See [docs/local-deployment.md](docs/local-deployment.md) and [ores-desktop-appliance.json](ores-desktop-appliance.json).
