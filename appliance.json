@@ -15,6 +15,7 @@
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
       "rev": "29272cb1073bb8ba887cbb410d6feff060f850c9",
+      "pull_request": 11,
       "kind": "rust-binary"
     },
     {
@@ -27,9 +28,10 @@
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "f408aef2c72228d219f8d0059b45fcda8748c097",
+      "rev": "774b17d467ab8b1202be062172d25edd856bd048",
+      "pull_request": 12,
       "kind": "node-worker",
-      "runtime_role": "takoda-supervisor-managed-per-run-child"
+      "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
     },
     {
       "name": "selenium-server",
@@ -40,7 +42,8 @@
     {
       "name": "desktop-cli",
       "repo": "takoda-automation/tkda-desktop-cli",
-      "rev": "de3a93c2f47a0443b11d1da6e0b72d3ad5949116",
+      "rev": "6dd6d1b0279e21a5a904419c7a4e9dcec4e6e9fa",
+      "pull_request": 1,
       "kind": "rust-binary"
     },
     {
