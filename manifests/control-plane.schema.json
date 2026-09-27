@@ -1,0 +1,51 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://takoda.dev/schemas/desktop/control-plane-v1.json",
+  "title": "Takoda desktop control plane",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "authority", "actors", "operations"],
+  "properties": {
+    "schema": { "const": "tkda.local-control/v1" },
+    "authority": { "const": "tkda-desktop-daemon" },
+    "actors": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": ["hosted-control-plane", "tkda-cli", "tkda-desktop-app.rs", "tkda-flutter", "tkda-desktop-infra"]
+      }
+    },
+    "operations": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "daemon.status",
+          "daemon.capabilities",
+          "runtime.plan",
+          "runtime.reconcile",
+          "runtime.start",
+          "runtime.stop",
+          "run.create",
+          "run.status",
+          "run.cancel",
+          "run.driver",
+          "tunnel.status",
+          "tunnel.start",
+          "tunnel.stop",
+          "update.status",
+          "update.apply",
+          "logs.stream"
+        ]
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "local": { "enum": ["uds-or-named-pipe", "authenticated-loopback"] },
+        "cloud": { "const": "authenticated-outbound" }
+      }
+    }
+  }
+}

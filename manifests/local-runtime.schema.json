@@ -1,0 +1,91 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://takoda.dev/schemas/desktop/local-runtime-v1.json",
+  "title": "Takoda desktop local runtime",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "runtime_kind", "control_plane", "execution"],
+  "properties": {
+    "schema": { "const": "tkda.desktop-runtime/v1" },
+    "runtime_kind": { "const": "takoda-browser-automation-host" },
+    "control_plane": { "$ref": "control-plane.schema.json" },
+    "execution": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["max_concurrency", "pairs", "browser_backends"],
+      "properties": {
+        "max_concurrency": { "type": "integer", "minimum": 1, "maximum": 256 },
+        "pairs": {
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 64,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["language", "browser_backend"],
+            "properties": {
+              "language": { "enum": ["typescript", "python", "go", "rust"] },
+              "browser_backend": { "enum": ["selenium", "playwright", "puppeteer"] },
+              "mode": { "enum": ["direct", "sidecar"] }
+            }
+          }
+        },
+        "browser_backends": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "selenium": { "$ref": "#/$defs/backend" },
+            "playwright": { "$ref": "#/$defs/backend" },
+            "puppeteer": { "$ref": "#/$defs/backend" }
+          }
+        }
+      }
+    },
+    "tunnel": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "hostname": { "type": ["string", "null"], "minLength": 1 },
+        "target": { "type": "string", "pattern": "^http://(127\\.0\\.0\\.1|localhost|\\[::1\\]):[0-9]+$" },
+        "credentials_file": { "type": ["string", "null"] }
+      }
+    },
+    "preferences": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "keep_takoda_alive_during_lock_screen": { "type": "boolean" },
+        "default_headless": { "type": "boolean" }
+      }
+    }
+  },
+  "$defs": {
+    "command": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["program"],
+      "properties": {
+        "program": { "type": "string", "minLength": 1 },
+        "args": { "type": "array", "maxItems": 128, "items": { "type": "string" } },
+        "cwd": { "type": ["string", "null"] },
+        "env": {
+          "type": "object",
+          "maxProperties": 128,
+          "propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+          "additionalProperties": { "type": "string" }
+        }
+      }
+    },
+    "backend": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["mode", "command"],
+      "properties": {
+        "mode": { "enum": ["direct", "sidecar", "remote"] },
+        "command": { "anyOf": [{ "$ref": "#/$defs/command" }, { "type": "null" }] },
+        "endpoint": { "type": ["string", "null"], "pattern": "^http://(127\\.0\\.0\\.1|localhost|\\[::1\\]):[0-9]+$" }
+      }
+    }
+  }
+}
