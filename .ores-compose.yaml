@@ -1,0 +1,11 @@
+schema_version: ores.compose.v1
+project: takoda-desktop
+allow_lazy_start: false
+source:
+  repository: https://github.com/takoda-automation/tkda-desktop-daemon.git
+  commit: c46bec9a0e9491a2f38ebd24dfc628c9150dafd3
+  checkout_dir: tmp/dev/tkda-desktop-daemon
+services:
+  daemon:
+    runtime: host
+    command: ["cargo", "run", "--release"]
