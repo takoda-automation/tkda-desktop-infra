@@ -1,0 +1,22 @@
+schema_version: ores.compose.v1
+project: takoda-desktop
+allow_lazy_start: false
+source:
+  repository: https://github.com/takoda-automation/tkda-desktop-daemon.git
+  commit: 29272cb1073bb8ba887cbb410d6feff060f850c9
+  checkout_dir: tmp/dev/tkda-desktop-daemon
+services:
+  daemon:
+    runtime: host
+    build:
+      - ["cargo", "build", "--release"]
+    command: ["./target/release/tkda-desktop-daemon"]
+    inherit_env:
+      - TKDA_AGENT_URL
+      - TKDA_AGENT_ID
+      - TKDA_AGENT_TOKEN_FILE
+      - TKDA_LOCAL_CONTROL_TOKEN_FILE
+    environment:
+      TKDA_LOCAL_CONTROL_BIND: "127.0.0.1:18087"
+      TKDA_LOCAL_SUPERVISOR_BIND: "127.0.0.1:18088"
+      TKDA_LAUNCH_SUPERVISOR: "false"
