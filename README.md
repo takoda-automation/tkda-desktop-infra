@@ -93,3 +93,50 @@ The current Scintilla desktop contract is `scintilla.local-control/v1`, with dae
 ## What belongs here vs elsewhere
 
 This repository contains the Takoda-specific projection onto the generic Scintilla laptop appliance. Generic lifecycle mechanisms stay in `scintilla-run/scintilla-desktop-infra`; Takoda task/run contracts stay in `tkda-interfaces`; browser runtime code stays in `tkda-browser-workers.ts` and `tkda-selenium-server`; GUI behavior stays in the Rust/Flutter apps.
+
+
+## Local Scintilla appliance
+
+The candidate appliance pins exact revisions in `appliance.json`. `scripts/bootstrap.sh` materializes those revisions and builds the Takoda daemon, desktop CLI, main supervisor, TypeScript browser worker, and Rust/Go worker adapters.
+
+Render the Scintilla desired-state manifest with absolute paths:
+
+```sh
+python3 scripts/render_scintilla_runtime.py \
+  --scintilla-ingress-bin /opt/scintilla/ingress/bin/scintilla_ingress \
+  --scintilla-ingress-root /opt/scintilla/ingress \
+  --tkda-main-server-bin "$PWD/.desktop/bin/tkda-main-server" \
+  --browser-worker-entry "$PWD/.desktop/src/browser-workers/dist/worker.js" \
+  --python-worker-entry "$PWD/.desktop/src/main-supervisor/workers/python/tkda_worker.py" \
+  --rust-worker-bin "$PWD/.desktop/bin/tkda-rust-worker" \
+  --go-worker-bin "$PWD/.desktop/bin/tkda-go-worker" \
+  --agent-id my-laptop \
+  --allow-headed \
+  --out "$PWD/.desktop/runtime.scintilla.json"
+```
+
+Then place the required cloud-agent values and manifest path in `.desktop/env`:
+
+```sh
+export TKDA_AGENT_URL='wss://api.takoda.dev/v1/agents/connect'
+export TKDA_AGENT_ID='my-laptop'
+export TKDA_AGENT_TOKEN_FILE="$HOME/.config/takoda/agent.token"
+export TKDA_ALLOW_HEADED=true
+export TKDA_SCINTILLA_RUNTIME_MANIFEST="$PWD/.desktop/runtime.scintilla.json"
+```
+
+Start and inspect the full local stack:
+
+```sh
+./scripts/up.sh
+./scripts/status.sh
+.desktop/bin/tkda-desktop-cli --command=doctor
+```
+
+The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda desktop supervisor on `127.0.0.1:18088`, and the authenticated Takoda desktop daemon on `127.0.0.1:18087`. Browser workers communicate through stdio and do not need a LAN-visible control port.
+
+### Browser engines
+
+`tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
+
+The candidate channel intentionally pins unmerged desktop-control commits while this implementation wave is under review. Do not promote those pins to a stable appliance until the referenced PR CI is green.
