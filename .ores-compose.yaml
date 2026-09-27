@@ -8,4 +8,6 @@ source:
 services:
   daemon:
     runtime: host
+    build:
+      - ["cargo", "build", "--release"]
     command: ["cargo", "run", "--release"]
