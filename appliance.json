@@ -28,7 +28,7 @@
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "cbbf5b79d95cb12c0c29adb841a3f0c782193696",
+      "rev": "2014d767e0b7697a5f5a56d8939f2a482584ea72",
       "pull_request": 12,
       "kind": "node-worker",
       "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
