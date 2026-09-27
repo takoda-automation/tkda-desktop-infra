@@ -1,0 +1,37 @@
+{
+  "schema": "tkda.desktop-appliance/v1",
+  "channel": "candidate",
+  "promotion_gate": "all referenced component CI must be green before promotion",
+  "components": [
+    {
+      "name": "desktop-daemon",
+      "repo": "takoda-automation/tkda-desktop-daemon",
+      "rev": "29272cb1073bb8ba887cbb410d6feff060f850c9",
+      "kind": "rust-binary"
+    },
+    {
+      "name": "main-supervisor",
+      "repo": "takoda-automation/tkda-main-server.rs",
+      "rev": "5cb682fb4d27932eeeb1dd98cf2f6a7c503df92e",
+      "kind": "rust-binary"
+    },
+    {
+      "name": "browser-workers",
+      "repo": "takoda-automation/tkda-browser-workers.ts",
+      "rev": "f408aef2c72228d219f8d0059b45fcda8748c097",
+      "kind": "node-worker"
+    },
+    {
+      "name": "desktop-cli",
+      "repo": "takoda-automation/tkda-desktop-cli",
+      "rev": "de3a93c2f47a0443b11d1da6e0b72d3ad5949116",
+      "kind": "rust-binary"
+    },
+    {
+      "name": "scintilla-desktop-infra",
+      "repo": "scintilla-run/scintilla-desktop-infra",
+      "rev": "4fe14263b2fa11ab7f13f3144701a491083bbce6",
+      "kind": "integration"
+    }
+  ]
+}
