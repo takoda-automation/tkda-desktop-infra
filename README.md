@@ -107,6 +107,8 @@ python3 scripts/render_scintilla_runtime.py \
   --scintilla-ingress-root /opt/scintilla/ingress \
   --tkda-main-server-bin "$PWD/.desktop/bin/tkda-main-server" \
   --browser-worker-entry "$PWD/.desktop/src/browser-workers/dist/worker.js" \
+  --selenium-node-entry "$PWD/.desktop/src/browser-workers/dist/selenium-node.js" \
+  --chromedriver-bin /absolute/path/to/chromedriver \
   --python-worker-entry "$PWD/.desktop/src/main-supervisor/workers/python/tkda_worker.py" \
   --rust-worker-bin "$PWD/.desktop/bin/tkda-rust-worker" \
   --go-worker-bin "$PWD/.desktop/bin/tkda-go-worker" \
@@ -133,10 +135,10 @@ Start and inspect the full local stack:
 .desktop/bin/tkda-desktop-cli --command=doctor
 ```
 
-The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda desktop supervisor on `127.0.0.1:18088`, and the authenticated Takoda desktop daemon on `127.0.0.1:18087`. Browser workers communicate through stdio and do not need a LAN-visible control port.
+The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda desktop supervisor on `127.0.0.1:18088`, raw ChromeDriver on `127.0.0.1:9515`, and the authenticated Takoda desktop daemon on `127.0.0.1:18087`. Per-run browser workers communicate through stdio; the ChromeDriver port is loopback-only and must never be published through Cloudflare Tunnel.
 
 ### Browser engines
 
-`tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
+`tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. For Selenium, Scintilla separately owns the long-running `dist/selenium-node.js` wrapper, which launches raw ChromeDriver on loopback; the per-run worker connects through `TKDA_SELENIUM_UPSTREAM_URL=http://127.0.0.1:9515`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
 
 The candidate channel intentionally pins unmerged desktop-control commits while this implementation wave is under review. Do not promote those pins to a stable appliance until the referenced PR CI is green.

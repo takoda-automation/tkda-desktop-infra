@@ -19,6 +19,8 @@ def main() -> None:
     parser.add_argument("--scintilla-ingress-root", required=True)
     parser.add_argument("--tkda-main-server-bin", required=True)
     parser.add_argument("--browser-worker-entry", required=True)
+    parser.add_argument("--selenium-node-entry", required=True)
+    parser.add_argument("--chromedriver-bin", required=True)
     parser.add_argument("--python-worker-entry", required=True)
     parser.add_argument("--rust-worker-bin", required=True)
     parser.add_argument("--go-worker-bin", required=True)
@@ -36,6 +38,8 @@ def main() -> None:
     ingress_root = absolute_file(args.scintilla_ingress_root, "--scintilla-ingress-root")
     main_server = absolute_file(args.tkda_main_server_bin, "--tkda-main-server-bin")
     browser_worker = absolute_file(args.browser_worker_entry, "--browser-worker-entry")
+    selenium_node = absolute_file(args.selenium_node_entry, "--selenium-node-entry")
+    chromedriver = absolute_file(args.chromedriver_bin, "--chromedriver-bin")
     python_worker = absolute_file(args.python_worker_entry, "--python-worker-entry")
     rust_worker = absolute_file(args.rust_worker_bin, "--rust-worker-bin")
     go_worker = absolute_file(args.go_worker_bin, "--go-worker-bin")
@@ -82,10 +86,25 @@ def main() -> None:
                         "TKDA_PYTHON_WORKER_ENTRY": python_worker,
                         "TKDA_RUST_WORKER_CMD": rust_worker,
                         "TKDA_GO_WORKER_CMD": go_worker,
+                        "TKDA_SELENIUM_UPSTREAM_URL": "http://127.0.0.1:9515",
                     },
                 },
                 "stop": {"timeout_seconds": 20},
-            }
+            },
+            {
+                "id": "takoda-selenium-node",
+                "runtime": "javascript",
+                "mode": "host",
+                "command": {
+                    "program": args.node_bin,
+                    "args": [selenium_node],
+                    "env": {
+                        "TKDA_CHROMEDRIVER_CMD": chromedriver,
+                        "TKDA_CHROMEDRIVER_PORT": "9515",
+                    },
+                },
+                "stop": {"timeout_seconds": 15},
+            },
         ],
         "tunnel": None,
         "update": None,

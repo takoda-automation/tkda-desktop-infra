@@ -41,6 +41,8 @@ with tempfile.TemporaryDirectory() as tmp:
         "scintilla-ingress",
         "tkda-main-server",
         "worker.js",
+        "selenium-node.js",
+        "chromedriver",
         "tkda_worker.py",
         "tkda-rust-worker",
         "tkda-go-worker",
@@ -61,6 +63,10 @@ with tempfile.TemporaryDirectory() as tmp:
             files["tkda-main-server"],
             "--browser-worker-entry",
             files["worker.js"],
+            "--selenium-node-entry",
+            files["selenium-node.js"],
+            "--chromedriver-bin",
+            files["chromedriver"],
             "--python-worker-entry",
             files["tkda_worker.py"],
             "--rust-worker-bin",
@@ -79,13 +85,23 @@ with tempfile.TemporaryDirectory() as tmp:
     assert rendered["schema"] == "scintilla.desktop-runtime/v1"
     assert rendered["runtime_kind"] == "scintilla-single-beam"
     workers = rendered["workers"]
-    assert len(workers) == 1
-    worker = workers[0]
-    assert worker["id"] == "takoda-main-supervisor"
-    env = worker["command"]["env"]
+    assert len(workers) == 2
+    by_id = {worker["id"]: worker for worker in workers}
+
+    supervisor = by_id["takoda-main-supervisor"]
+    env = supervisor["command"]["env"]
     assert env["TKDA_BIND"] == "127.0.0.1:18088"
     assert env["TKDA_EXECUTION_ROLE"] == "desktop"
     assert env["TKDA_ALLOW_HEADED"] == "true"
+    assert env["TKDA_SELENIUM_UPSTREAM_URL"] == "http://127.0.0.1:9515"
+
+    selenium = by_id["takoda-selenium-node"]
+    assert selenium["runtime"] == "javascript"
+    assert selenium["mode"] == "host"
+    assert selenium["command"]["program"] == "node"
+    assert selenium["command"]["args"] == [files["selenium-node.js"]]
+    assert selenium["command"]["env"]["TKDA_CHROMEDRIVER_CMD"] == files["chromedriver"]
+    assert selenium["command"]["env"]["TKDA_CHROMEDRIVER_PORT"] == "9515"
     assert rendered["tunnel"] is None
 
 print("Takoda desktop manifest contract: OK")
