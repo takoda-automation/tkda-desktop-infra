@@ -14,30 +14,32 @@
     {
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
-      "rev": "dfc885fcb576c96b6b82760ade55a87f48da5417",
+      "rev": "466fe5aefd6cfb94cb6be368cc1fd85264faf741",
       "pull_request": 11,
       "kind": "rust-binary"
     },
     {
       "name": "main-supervisor",
       "repo": "takoda-automation/tkda-main-server.rs",
-      "rev": "8c7453f1483d04425d286024622e2918610ecd1b",
+      "rev": "5b0a32d1219d26b1519661e63cc24c7b03b785a8",
       "kind": "rust-binary",
-      "runtime_role": "scintilla-managed-long-lived-worker"
+      "runtime_role": "scintilla-managed-long-lived-worker",
+      "pull_request": 23
     },
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "602c7c793143e44c2dd03b9c57ed8a3ccf687eb0",
-      "pull_request": 12,
+      "rev": "e93cc4af45f8a3fff653224e1c96e1171a221cf2",
+      "pull_request": 15,
       "kind": "node-worker",
       "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
     },
     {
       "name": "selenium-server",
       "repo": "takoda-automation/tkda-selenium-server",
-      "rev": "7ae290ccf970a443d46bba37aa1bdbed7699a299",
-      "kind": "rust-service"
+      "rev": "c8d43ed8fde40b2cdbe03a644c16926267b9b318",
+      "kind": "rust-service",
+      "pull_request": 11
     },
     {
       "name": "desktop-cli",
@@ -59,7 +61,8 @@
     "takoda_supervisor_owns_per_run_worker_protocol": true,
     "browser_control_ports_loopback_only": true,
     "arbitrary_remote_shell": false,
-    "mutable_latest_releases": false
+    "mutable_latest_releases": false,
+    "supervisor_control_requires_auth": true
   },
   "promotion_gates": {
     "scintilla_runtime_matches_current_desktop_infra_contract": true,
@@ -69,6 +72,7 @@
     "flutter_desktop_green": false,
     "playwright_local_smoke_green": false,
     "puppeteer_local_smoke_green": false,
-    "selenium_local_smoke_green": false
+    "selenium_local_smoke_green": false,
+    "supervisor_auth_candidate_wired": true
   }
 }
