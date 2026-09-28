@@ -61,7 +61,7 @@ The worker language and browser backend are independent axes. The local applianc
 - Python / Go / Rust + Selenium;
 - non-TypeScript workers using bounded Playwright/Puppeteer sidecars where required.
 
-Headed and headless execution are separate policy choices. Browser-control ports stay loopback-only and are never published through Cloudflare Tunnel.
+Headed and headless execution are separate policy choices. Browser-control ports stay loopback-only and are never published through Cloudflare Tunnel. When configured, a dedicated persistent Playwright profile can retain local authenticated browser state across scheduled runs without using the user's everyday browser profile.
 
 ## Control loop
 
@@ -160,7 +160,7 @@ ores-compose up .ores-compose.yaml
 
 The compose manifest pins the same `tkda-desktop-daemon` revision as native `appliance.json`, requires agent/local-control token **file paths**, binds only to loopback, and sets `TKDA_LAUNCH_SUPERVISOR=false` so Scintilla remains the long-lived process owner.
 
-Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. See [docs/local-deployment.md](docs/local-deployment.md) and [ores-desktop-appliance.json](ores-desktop-appliance.json).
+Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. An **optional OAuth browser-MCP lane** can publish only the loopback MCP gateway for externally orchestrated browser automation while leaving daemon/WebDriver/CDP ports private. See [docs/browser-mcp-cloudflare.md](docs/browser-mcp-cloudflare.md), [docs/local-deployment.md](docs/local-deployment.md), and [ores-desktop-appliance.json](ores-desktop-appliance.json).
 
 ## Shared desktop infra dependency
 
