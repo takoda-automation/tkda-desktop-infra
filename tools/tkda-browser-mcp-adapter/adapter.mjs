@@ -58,7 +58,7 @@ function readSecret(valueName, fileName) {
 function parseLoopbackUrl(raw, label) {
   const url = new URL(raw);
   if (url.protocol !== 'http:') throw new Error(`${label} must use http:// loopback`);
-  if (!['127.0.0.1', 'localhost', '[::1]', '::1'].includes(url.hostname)) {
+  if (!['127.0.0.1', '[::1]', '::1'].includes(url.hostname)) {
     throw new Error(`${label} must target loopback`);
   }
   if (url.username || url.password || url.search || url.hash) {
@@ -72,7 +72,7 @@ function parseBind(raw) {
   if (index <= 0) throw new Error('TKDA_BROWSER_MCP_ADAPTER_BIND must be host:port');
   const host = raw.slice(0, index);
   const port = Number(raw.slice(index + 1));
-  if (!['127.0.0.1', 'localhost', '::1'].includes(host) || !Number.isInteger(port) || port < 1 || port > 65535) {
+  if (!['127.0.0.1', '::1'].includes(host) || !Number.isInteger(port) || port < 1 || port > 65535) {
     throw new Error('browser MCP adapter must bind to loopback on a valid port');
   }
   return { host, port };
