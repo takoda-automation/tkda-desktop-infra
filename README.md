@@ -148,7 +148,7 @@ The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda d
 
 `tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. For Selenium, Scintilla separately owns the long-running `dist/selenium-node.js` wrapper, which launches raw ChromeDriver on loopback; the per-run worker connects through `TKDA_SELENIUM_UPSTREAM_URL=http://127.0.0.1:9515`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
 
-The candidate channel intentionally pins in-review desktop-control commits while this implementation wave is under review. Promotion remains fail-closed until the referenced component CI and local browser E2E gates are green on the exact pinned revisions.
+The candidate channel intentionally pins in-review desktop-control commits while this implementation wave is under review. Bootstrap also requires the pinned browser-worker revision to contain `package-lock.json` and installs it with `npm ci`; promotion remains fail-closed until that lockfile exists and the referenced component CI/local browser E2E gates are green on the exact pinned revisions.
 
 ## ORES Compose local daemon lifecycle
 

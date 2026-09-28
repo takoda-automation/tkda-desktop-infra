@@ -23,7 +23,11 @@ cargo build --release --manifest-path "$SRC/main-supervisor/workers/rust/Cargo.t
 )
 (
   cd "$SRC/browser-workers"
-  npm install --ignore-scripts
+  test -f package-lock.json || {
+    echo "browser-workers is missing package-lock.json; refusing mutable npm dependency resolution" >&2
+    exit 1
+  }
+  npm ci --ignore-scripts --no-audit --no-fund
   npm run build
 )
 cargo build --release --manifest-path "$SRC/desktop-cli/Cargo.toml"
