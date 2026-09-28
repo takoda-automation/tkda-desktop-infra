@@ -103,6 +103,7 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "TKDA_AGENT_ID",
         "TKDA_AGENT_TOKEN_FILE",
         "TKDA_LOCAL_CONTROL_TOKEN_FILE",
+        "TKDA_LOCAL_SUPERVISOR_TOKEN_FILE",
     ] {
         if !inherited.iter().any(|value| value == required) {
             return Err(format!("required inherited input missing: {required}"));
@@ -121,6 +122,10 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         || appliance
             .invariants
             .get("browser_control_ports_loopback_only")
+            != Some(&Value::Bool(true))
+        || appliance
+            .invariants
+            .get("supervisor_control_requires_auth")
             != Some(&Value::Bool(true))
     {
         return Err("native security invariants drifted".into());
@@ -197,6 +202,13 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             return Err(format!("forbidden Python tooling remains: {forbidden}"));
         }
     }
+    let up_script = fs::read_to_string(root.join("scripts/up.sh")).map_err(|e| e.to_string())?;
+    if !up_script.contains("TKDA_LOCAL_SUPERVISOR_TOKEN_FILE")
+        || !up_script.contains("TKDA_LOCAL_CONTROL_TOKEN_FILE")
+    {
+        return Err("desktop startup must pass distinct control and supervisor token files".into());
+    }
+
     for checked in [
         "scripts/bootstrap.sh",
         ".github/workflows/ci.yml",
