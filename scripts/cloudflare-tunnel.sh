@@ -24,7 +24,7 @@ validate_metrics_addr() {
   elif [[ "$METRICS_ADDR" =~ ^\[::1\]:([0-9]{1,5})$ ]]; then
     port="${BASH_REMATCH[1]}"
   else
-    echo "TKDA_CLOUDFLARE_METRICS_ADDR must use literal loopback 127.0.0.1 or [::1]" >&2
+    echo "TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port using literal 127.0.0.1 or [::1]" >&2
     exit 1
   fi
 
