@@ -231,6 +231,79 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         return Err("native common desktop promotion gate cannot be green while unpinned".into());
     }
 
+    let generation: Value = read_json(root.join("ores-generation-contract.json"))?;
+    if generation.get("schema").and_then(Value::as_str)
+        != Some("ores.desktop-generation-consumer/v1")
+        || generation
+            .pointer("/consumer/repository")
+            .and_then(Value::as_str)
+            != Some("takoda-automation/tkda-desktop-infra")
+        || generation
+            .pointer("/authority/repository")
+            .and_then(Value::as_str)
+            != Some("ORESoftware/ores-common-desktop-infra")
+    {
+        return Err("generation contract identity drifted".into());
+    }
+    let generation_revision = generation
+        .pointer("/authority/revision")
+        .and_then(Value::as_str)
+        .ok_or_else(|| "generation authority revision missing".to_owned())?;
+    if !is_sha(generation_revision) {
+        return Err("generation authority must use exact lowercase 40-hex revision".into());
+    }
+    let lifecycle = generation
+        .get("lifecycle")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "generation lifecycle missing".to_owned())?;
+    let expected_lifecycle = [
+        "prepare",
+        "validate",
+        "compile_build_generation",
+        "stage",
+        "health_check",
+        "atomic_activate",
+        "bounded_drain",
+        "commit",
+    ];
+    if lifecycle.iter().filter_map(Value::as_str).collect::<Vec<_>>() != expected_lifecycle {
+        return Err("generation lifecycle drifted".into());
+    }
+    if generation.pointer("/rollback/required_before_commit").and_then(Value::as_bool) != Some(true)
+        || generation.pointer("/rollback/retain_previous_generation").and_then(Value::as_bool)
+            != Some(true)
+        || generation.pointer("/request_semantics/new_requests").and_then(Value::as_str)
+            != Some("active_generation")
+        || generation.pointer("/request_semantics/existing_requests").and_then(Value::as_str)
+            != Some("pinned_generation")
+        || generation
+            .pointer("/request_semantics/generation_identity_required")
+            .and_then(Value::as_bool)
+            != Some(true)
+        || generation
+            .pointer("/routing/edge_proxy_route_authority")
+            .and_then(Value::as_bool)
+            != Some(false)
+        || generation
+            .pointer("/middleware/beam_code_reload_requires_drain_or_otp_proof")
+            .and_then(Value::as_bool)
+            != Some(true)
+        || generation
+            .pointer("/verification/shared_conformance_required")
+            .and_then(Value::as_bool)
+            != Some(true)
+        || generation
+            .pointer("/verification/product_e2e_required")
+            .and_then(Value::as_bool)
+            != Some(true)
+        || generation
+            .pointer("/verification/promotion_state")
+            .and_then(Value::as_str)
+            != Some("candidate")
+    {
+        return Err("generation safety or promotion contract drifted".into());
+    }
+
     let policy = fs::read_to_string(root.join(".tkda-desktop.toml")).map_err(|e| e.to_string())?;
     for engine in ["selenium", "playwright", "puppeteer"] {
         if !policy.contains(engine) {
@@ -278,6 +351,7 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "scripts/bootstrap.sh",
         ".github/workflows/ci.yml",
         ".github/workflows/desktop-contract.yml",
+        ".github/workflows/generation-contract.yml",
     ] {
         let source = fs::read_to_string(root.join(checked)).map_err(|e| e.to_string())?;
         if source.contains("python3")
