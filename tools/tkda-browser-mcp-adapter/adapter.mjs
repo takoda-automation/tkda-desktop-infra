@@ -260,9 +260,19 @@ function requestedDomainCeiling(allowedDomains) {
 
 function domainAllowed(raw, allowedDomains) {
   const requested = requestedDomainCeiling(allowedDomains);
+  let url;
+  try {
+    url = new URL(raw);
+  } catch {
+    return false;
+  }
+  if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) {
+    return false;
+  }
+
   let host;
   try {
-    host = normalizeDomainToken(new URL(raw).hostname, 'browser destination');
+    host = normalizeDomainToken(url.hostname, 'browser destination');
   } catch {
     return false;
   }
