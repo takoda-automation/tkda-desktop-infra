@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
 };
 
@@ -235,10 +234,19 @@ mod tests {
         let manifest = render_manifest(&config).unwrap();
         let workers = manifest["workers"].as_array().unwrap();
         assert_eq!(workers.len(), 2);
-        let supervisor = workers.iter().find(|v| v["id"] == "takoda-main-supervisor").unwrap();
+        let supervisor = workers
+            .iter()
+            .find(|v| v["id"] == "takoda-main-supervisor")
+            .unwrap();
         assert_eq!(supervisor["command"]["env"]["TKDA_BIND"], "127.0.0.1:18088");
-        assert_eq!(supervisor["command"]["env"]["TKDA_SELENIUM_UPSTREAM_URL"], "http://127.0.0.1:9515");
-        let selenium = workers.iter().find(|v| v["id"] == "takoda-selenium-node").unwrap();
+        assert_eq!(
+            supervisor["command"]["env"]["TKDA_SELENIUM_UPSTREAM_URL"],
+            "http://127.0.0.1:9515"
+        );
+        let selenium = workers
+            .iter()
+            .find(|v| v["id"] == "takoda-selenium-node")
+            .unwrap();
         assert_eq!(selenium["command"]["env"]["TKDA_CHROMEDRIVER_PORT"], "9515");
         assert!(manifest["tunnel"].is_null());
         let _ = fs::remove_dir_all(root);
