@@ -42,8 +42,7 @@ The machine-readable ORES appliance currently records:
 
 - repository: `ORESoftware/ores-common-desktop-infra`;
 - checkout: `tmp/dev/ores-common-desktop-infra`;
-- status: `awaiting-repository`;
-- revision: `null`.
+- status: `pinned`; revision: `7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c`.
 
 That is a fail-closed migration state. Stable promotion is blocked while `promotion_gates.common_layer_pinned` is false.
 
@@ -58,3 +57,10 @@ Once the common repository is available, migration must be atomic:
 
 Mutable branches or tags are not acceptable release dependencies.
 
+
+
+### Common layer CI evidence
+
+The ORES projection pins `ORESoftware/ores-common-desktop-infra` at `7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c`. CI checks out exactly that private revision and runs the shared Rust consumer checker before the Takoda-specific Scintilla ownership assertions.
+
+`common_layer_ci_verified` and `common_desktop_infra_ci_verified` remain false until the exact workflow executes successfully with an approved cross-org read credential.
