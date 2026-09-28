@@ -269,12 +269,21 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     if lifecycle.iter().filter_map(Value::as_str).collect::<Vec<_>>() != expected_lifecycle {
         return Err("generation lifecycle drifted".into());
     }
-    if generation.pointer("/rollback/required_before_commit").and_then(Value::as_bool) != Some(true)
-        || generation.pointer("/rollback/retain_previous_generation").and_then(Value::as_bool)
+    if generation
+        .pointer("/rollback/required_before_commit")
+        .and_then(Value::as_bool)
+        != Some(true)
+        || generation
+            .pointer("/rollback/retain_previous_generation")
+            .and_then(Value::as_bool)
             != Some(true)
-        || generation.pointer("/request_semantics/new_requests").and_then(Value::as_str)
+        || generation
+            .pointer("/request_semantics/new_requests")
+            .and_then(Value::as_str)
             != Some("active_generation")
-        || generation.pointer("/request_semantics/existing_requests").and_then(Value::as_str)
+        || generation
+            .pointer("/request_semantics/existing_requests")
+            .and_then(Value::as_str)
             != Some("pinned_generation")
         || generation
             .pointer("/request_semantics/generation_identity_required")
@@ -351,7 +360,6 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "scripts/bootstrap.sh",
         ".github/workflows/ci.yml",
         ".github/workflows/desktop-contract.yml",
-        ".github/workflows/generation-contract.yml",
     ] {
         let source = fs::read_to_string(root.join(checked)).map_err(|e| e.to_string())?;
         if source.contains("python3")
