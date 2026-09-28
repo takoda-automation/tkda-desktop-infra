@@ -155,6 +155,10 @@ fn absolute_directory_or_create(key: &str) -> Result<PathBuf, String> {
         return Err(format!("{key} must be absolute"));
     }
     fs::create_dir_all(&path).map_err(|e| format!("{key}: {e}"))?;
+    let meta = fs::symlink_metadata(&path).map_err(|e| format!("{key}: {e}"))?;
+    if !meta.file_type().is_dir() || meta.file_type().is_symlink() {
+        return Err(format!("{key} must reference a non-symlink directory"));
+    }
     Ok(path)
 }
 
