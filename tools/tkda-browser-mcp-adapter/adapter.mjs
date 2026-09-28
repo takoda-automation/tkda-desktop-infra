@@ -174,7 +174,7 @@ async function driver(runId, action, timeoutMs = DEFAULT_TIMEOUT_MS) {
 }
 
 function domainAllowed(raw, allowedDomains) {
-  if (!allowedDomains?.length) return true;
+  if (!allowedDomains?.length) return false;
   let host;
   try { host = new URL(raw).hostname.toLowerCase(); } catch { return false; }
   return allowedDomains.some((domain) => {
@@ -193,10 +193,105 @@ function blockerFromSnapshot(snapshot) {
   return null;
 }
 
+function snapshotFingerprint(snapshot) {
+  const elements = (Array.isArray(snapshot?.elements) ? snapshot.elements : []).map((item) => ({
+    ref: item.ref ?? '',
+    role: item.role ?? '',
+    name: item.name ?? '',
+    label: item.label ?? '',
+    placeholder: item.placeholder ?? '',
+    type: item.type ?? '',
+    required: item.required === true,
+    disabled: item.disabled === true,
+    checked: item.checked,
+    value_state: item.value_state ?? '',
+    selected_option: item.selected_option ?? '',
+  }));
+  return createHash('sha256')
+    .update(JSON.stringify({
+      url: snapshot?.url ?? '',
+      title: snapshot?.title ?? '',
+      visible_text: String(snapshot?.visible_text ?? '').slice(0, 30_000),
+      elements,
+      signals: snapshot?.signals ?? {},
+    }))
+    .digest('hex');
+}
+
+function sensitiveField(element) {
+  const descriptor = [
+    element?.type,
+    element?.name,
+    element?.label,
+    element?.placeholder,
+  ].filter(Boolean).join(' ');
+  return /\b(password|passcode|social security|ssn|tax[ -]?id|ein|credit card|card number|cvv|cvc|security code|one[ -]?time|otp|verification code|authenticator|pin)\b/i.test(descriptor);
+}
+
+function literalFillValue(element, valueSpec) {
+  if (sensitiveField(element)) {
+    throw Object.assign(
+      new Error('sensitive credential/identity fields are not writable through the Takoda MCP adapter; use the dedicated persistent profile or human input'),
+      { status: 422, code: 'sensitive_field_blocked' },
+    );
+  }
+  const value = valueSpec?.literal;
+  if (typeof value !== 'string') {
+    throw Object.assign(
+      new Error('Takoda adapter currently accepts literal non-sensitive field values only'),
+      { status: 422, code: 'secret_required' },
+    );
+  }
+  return value;
+}
+
+function updateObservedState(session, snapshot) {
+  const fingerprint = snapshotFingerprint(snapshot);
+  if (session.fingerprint && session.fingerprint !== fingerprint) session.revision += 1;
+  session.fingerprint = fingerprint;
+  session.lastActivity = Date.now();
+}
+
+async function refreshSession(session, maxElements = 200) {
+  const snap = await snapshot(session, maxElements);
+  updateObservedState(session, snap);
+  return projectSnapshot(session, snap);
+}
+
+async function waitCondition(session, condition, timeoutMs) {
+  if (condition?.duration_ms !== undefined) {
+    const duration = Math.min(30_000, Math.max(0, Number(condition.duration_ms) || 0));
+    await driver(session.runId, { op: 'sleep', milliseconds: duration }, duration + 2_000);
+    return;
+  }
+  if (!condition || condition.load_state) return;
+
+  const deadline = Date.now() + Math.min(30_000, Math.max(100, timeoutMs));
+  while (Date.now() < deadline) {
+    const snap = await snapshot(session);
+    updateObservedState(session, snap);
+    projectSnapshot(session, snap);
+
+    if (condition.url_matches && String(snap.url ?? '').includes(String(condition.url_matches))) return;
+    if (condition.text_visible && String(snap.visible_text ?? '').includes(String(condition.text_visible))) return;
+    if (condition.element_visible) {
+      try {
+        findTarget(session, condition.element_visible);
+        return;
+      } catch (error) {
+        if (!['target_not_found', 'ambiguous_target'].includes(error.code)) throw error;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, 200));
+  }
+  throw Object.assign(new Error('browser wait condition timed out'), { status: 504, code: 'action_timeout' });
+}
+
 function projectSnapshot(session, snapshot, sinceRevision, timedOut = false) {
   const elements = Array.isArray(snapshot?.elements) ? snapshot.elements : [];
   session.elements = elements;
   session.lastSnapshot = snapshot;
+  session.lastActivity = Date.now();
   const fields = elements.filter((item) => ['textbox', 'combobox', 'checkbox', 'radio'].includes(item.role));
   const buttons = elements.filter((item) => item.role === 'button');
   const links = elements.filter((item) => item.role === 'link');
@@ -265,7 +360,7 @@ function consequential(action, element) {
   if (action.type === 'submit') return true;
   if (action.type !== 'click') return false;
   const label = `${element?.name ?? ''} ${element?.label ?? ''}`;
-  return /\b(submit|apply|send|confirm|complete|finish|agree|accept|purchase|pay|sign|register)\b/i.test(label);
+  return /\b(submit|send|confirm|complete|finalize|finish|agree|accept|purchase|pay|sign|register)\b/i.test(label);
 }
 
 function digestFor(session, action, element) {
