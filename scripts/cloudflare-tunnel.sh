@@ -17,6 +17,16 @@ PID_FILE="$STATE/cloudflared.pid"
 LOG_FILE="$STATE/logs/cloudflared.log"
 METRICS_ADDR="${TKDA_CLOUDFLARE_METRICS_ADDR:-127.0.0.1:20241}"
 
+validate_metrics_addr() {
+  case "$METRICS_ADDR" in
+    127.0.0.1:[0-9]*|localhost:[0-9]*|"[::1]":[0-9]*) ;;
+    *)
+      echo "TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port" >&2
+      exit 1
+      ;;
+  esac
+}
+
 is_running() {
   [[ -f "$PID_FILE" ]] || return 1
   local pid
@@ -33,11 +43,23 @@ require_token_file() {
     echo "tunnel token file must be an existing regular non-symlink file: $TOKEN_FILE" >&2
     exit 1
   }
-  if [[ "$(wc -c < "$TOKEN_FILE" | tr -d ' ')" -gt 16384 ]]; then
-    echo "tunnel token file is unexpectedly large" >&2
+  local size
+  size="$(wc -c < "$TOKEN_FILE" | tr -d ' ')"
+  if [[ "$size" -lt 32 || "$size" -gt 16384 ]]; then
+    echo "tunnel token file has an invalid size" >&2
     exit 1
   fi
+  if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "MSYS"* && "$(uname -s)" != "CYGWIN"* ]]; then
+    local mode
+    mode="$(stat -c '%a' "$TOKEN_FILE" 2>/dev/null || stat -f '%Lp' "$TOKEN_FILE" 2>/dev/null || true)"
+    if [[ -z "$mode" || $((8#$mode & 077)) -ne 0 ]]; then
+      echo "tunnel token file must not be readable or writable by group/other users" >&2
+      exit 1
+    fi
+  fi
 }
+
+validate_metrics_addr
 
 case "$ACTION" in
   start)
