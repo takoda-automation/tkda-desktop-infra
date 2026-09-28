@@ -105,6 +105,12 @@ case "$cmd" in
     echo "cloudflared token-file support: available"
     echo "origin policy: only publish http://127.0.0.1:18087; never publish 18088, 9515, 8765, 8091, CDP, or WebDriver"
     echo "Cloudflare Access: require a service-token policy for machine callers"
+    if [[ -z "${TKDA_CLOUDFLARE_PUBLIC_URL:-}" ]]; then
+      echo "warning: TKDA_CLOUDFLARE_PUBLIC_URL is not configured" >&2
+    elif [[ "$TKDA_CLOUDFLARE_PUBLIC_URL" != https://* ]]; then
+      echo "TKDA_CLOUDFLARE_PUBLIC_URL must use https://" >&2
+      exit 1
+    fi
     ;;
 
   *)
