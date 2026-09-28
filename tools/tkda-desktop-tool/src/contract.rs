@@ -266,7 +266,12 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "bounded_drain",
         "commit",
     ];
-    if lifecycle.iter().filter_map(Value::as_str).collect::<Vec<_>>() != expected_lifecycle {
+    if lifecycle
+        .iter()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>()
+        != expected_lifecycle
+    {
         return Err("generation lifecycle drifted".into());
     }
     if generation
