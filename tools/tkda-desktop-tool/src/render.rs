@@ -21,6 +21,7 @@ pub struct RenderConfig {
     pub node_bin: String,
     pub python_bin: String,
     pub allow_headed: bool,
+    pub playwright_user_data_dir: Option<PathBuf>,
 }
 
 pub fn config_from_env() -> Result<RenderConfig, String> {
@@ -39,6 +40,7 @@ pub fn config_from_env() -> Result<RenderConfig, String> {
         node_bin: bounded_program_env("TKDA_NODE_BIN", "node")?,
         python_bin: bounded_program_env("TKDA_PYTHON_BIN", "python3")?,
         allow_headed: env::var("TKDA_ALLOW_HEADED").as_deref() == Ok("true"),
+        playwright_user_data_dir: optional_absolute_directory_path("TKDA_PLAYWRIGHT_USER_DATA_DIR")?,
     })
 }
 
@@ -83,7 +85,12 @@ pub fn render_manifest(config: &RenderConfig) -> Result<Value, String> {
                         "TKDA_PYTHON_WORKER_ENTRY": path_string(&config.python_worker_entry)?,
                         "TKDA_RUST_WORKER_CMD": path_string(&config.rust_worker_bin)?,
                         "TKDA_GO_WORKER_CMD": path_string(&config.go_worker_bin)?,
-                        "TKDA_SELENIUM_UPSTREAM_URL": "http://127.0.0.1:9515"
+                        "TKDA_SELENIUM_UPSTREAM_URL": "http://127.0.0.1:9515",
+                        "TKDA_PLAYWRIGHT_USER_DATA_DIR": config
+                            .playwright_user_data_dir
+                            .as_ref()
+                            .map(|path| path_string(path))
+                            .transpose()?
                     }
                 },
                 "stop": {"timeout_seconds": 20}
@@ -192,6 +199,25 @@ fn absolute_directory(key: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn optional_absolute_directory_path(key: &str) -> Result<Option<PathBuf>, String> {
+    let raw = match env::var(key) {
+        Ok(value) if !value.trim().is_empty() => value,
+        _ => return Ok(None),
+    };
+    let path = PathBuf::from(raw);
+    if !path.is_absolute() {
+        return Err(format!("{key} must be an absolute path"));
+    }
+    if let Ok(meta) = fs::symlink_metadata(&path) {
+        if meta.file_type().is_symlink() || !meta.file_type().is_dir() {
+            return Err(format!(
+                "{key} must reference a directory and may not be a symlink when it already exists"
+            ));
+        }
+    }
+    Ok(Some(path))
+}
+
 fn absolute_output_path(key: &str) -> Result<PathBuf, String> {
     let raw = env::var(key).map_err(|_| format!("{key} is required"))?;
     let path = PathBuf::from(raw);
@@ -243,6 +269,7 @@ mod tests {
             node_bin: "node".into(),
             python_bin: "python3".into(),
             allow_headed: true,
+            playwright_user_data_dir: Some(root.join("playwright-profile")),
         };
         let manifest = render_manifest(&config).unwrap();
         let workers = manifest["workers"].as_array().unwrap();
@@ -252,6 +279,7 @@ mod tests {
             .find(|v| v["id"] == "takoda-main-supervisor")
             .unwrap();
         assert_eq!(supervisor["command"]["env"]["TKDA_BIND"], "127.0.0.1:18088");
+        assert_eq!(supervisor["command"]["env"]["TKDA_PLAYWRIGHT_USER_DATA_DIR"], root.join("playwright-profile").to_str().unwrap());
         assert_eq!(
             supervisor["command"]["env"]["TKDA_SELENIUM_UPSTREAM_URL"],
             "http://127.0.0.1:9515"
