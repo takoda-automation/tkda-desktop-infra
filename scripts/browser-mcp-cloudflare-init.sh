@@ -22,5 +22,5 @@ fi
 cloudflared tunnel route dns "$TKDA_CLOUDFLARE_TUNNEL" "$TKDA_BROWSER_MCP_HOSTNAME" || true
 
 echo "Cloudflare tunnel prepared: $TKDA_CLOUDFLARE_TUNNEL"
-echo "public MCP endpoint: https://$TKDA_BROWSER_MCP_HOSTNAME/mcp"
+echo "canonical OAuth MCP endpoint: https://$TKDA_BROWSER_MCP_HOSTNAME"
 echo "Only the OAuth MCP gateway on 127.0.0.1:8092 will be published."
