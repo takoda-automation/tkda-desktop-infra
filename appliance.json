@@ -74,6 +74,7 @@
     "selenium_local_smoke_green": false,
     "common_desktop_infra_pinned": false,
     "desktop_browser_network_isolation_green": false,
-    "cloudflare_route_and_access_policy_reviewed": false
+    "cloudflare_route_and_access_policy_reviewed": false,
+    "browser_worker_lockfile_committed": false
   }
 }
