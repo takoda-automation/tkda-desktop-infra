@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 import { createServer } from 'node:http';
 import { createHash, randomUUID, timingSafeEqual } from 'node:crypto';
-import { readFileSync } from 'node:fs';
+import { lstatSync, readFileSync } from 'node:fs';
+import { isAbsolute } from 'node:path';
 
 const MAX_BODY_BYTES = 1_048_576;
 const MAX_SESSIONS = 8;
@@ -47,12 +48,27 @@ function domainWithin(domain, ceiling) {
   return domain === ceiling || domain.endsWith(`.${ceiling}`);
 }
 
-function readSecret(valueName, fileName) {
-  const direct = env(valueName);
-  if (direct) return direct;
+function readSecretFile(fileName) {
   const file = env(fileName);
-  if (!file) throw new Error(`set ${valueName} or ${fileName}`);
-  return readFileSync(file, 'utf8').trim();
+  if (!file) throw new Error(`${fileName} is required`);
+  if (!isAbsolute(file)) throw new Error(`${fileName} must be an absolute path`);
+
+  const metadata = lstatSync(file);
+  if (!metadata.isFile() || metadata.isSymbolicLink()) {
+    throw new Error(`${fileName} must reference a regular non-symlink file`);
+  }
+  if (process.platform !== 'win32' && (metadata.mode & 0o077) !== 0) {
+    throw new Error(`${fileName} permissions are too broad; expected mode 0600`);
+  }
+  if (metadata.size < 32 || metadata.size > 4097) {
+    throw new Error(`${fileName} size is outside the supported secret bounds`);
+  }
+
+  const secret = readFileSync(file, 'utf8').trim();
+  if (secret.length < 32 || secret.length > 4096 || /\s/.test(secret)) {
+    throw new Error(`${fileName} must contain 32..=4096 non-whitespace characters`);
+  }
+  return secret;
 }
 
 function parseLoopbackUrl(raw, label) {
@@ -80,11 +96,10 @@ function parseBind(raw) {
 
 const bind = parseBind(env('TKDA_BROWSER_MCP_ADAPTER_BIND', DEFAULT_BIND));
 const daemonBase = parseLoopbackUrl(env('TKDA_LOCAL_CONTROL_URL', DEFAULT_DAEMON), 'TKDA_LOCAL_CONTROL_URL');
-const localControlToken = readSecret('TKDA_LOCAL_CONTROL_TOKEN', 'TKDA_LOCAL_CONTROL_TOKEN_FILE');
-const workerSecret = readSecret('TKDA_BROWSER_MCP_WORKER_SECRET', 'TKDA_BROWSER_MCP_WORKER_SECRET_FILE');
+const localControlToken = readSecretFile('TKDA_LOCAL_CONTROL_TOKEN_FILE');
+const workerSecret = readSecretFile('TKDA_BROWSER_MCP_WORKER_SECRET_FILE');
 const executionMode = env('TKDA_BROWSER_MCP_EXECUTION_MODE', 'headless');
 if (!['headed', 'headless'].includes(executionMode)) throw new Error('TKDA_BROWSER_MCP_EXECUTION_MODE must be headed or headless');
-if (localControlToken.length < 32 || workerSecret.length < 32) throw new Error('browser MCP secrets must be at least 32 characters');
 const serverAllowedDomains = parseDomainList(
   env('TKDA_BROWSER_MCP_ALLOWED_DOMAINS'),
   'TKDA_BROWSER_MCP_ALLOWED_DOMAINS',
