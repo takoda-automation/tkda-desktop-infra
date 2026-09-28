@@ -54,6 +54,18 @@ if (!['headed', 'headless'].includes(executionMode)) throw new Error('TKDA_BROWS
 if (localControlToken.length < 32 || workerSecret.length < 32) throw new Error('browser MCP secrets must be at least 32 characters');
 
 const sessions = new Map();
+const SESSION_IDLE_MS = 30 * 60 * 1000;
+const SESSION_ABSOLUTE_MS = 4 * 60 * 60 * 1000;
+
+const sessionReaper = setInterval(() => {
+  const now = Date.now();
+  for (const session of sessions.values()) {
+    if (now - session.lastActivity <= SESSION_IDLE_MS && now - session.createdAt <= SESSION_ABSOLUTE_MS) continue;
+    sessions.delete(session.id);
+    void daemon(`/v1/runs/${encodeURIComponent(session.runId)}/cancel`, { method: 'POST', body: {} }).catch(() => {});
+  }
+}, 60_000);
+sessionReaper.unref();
 
 function sendJson(res, status, body) {
   const payload = Buffer.from(JSON.stringify(body));
@@ -392,14 +404,22 @@ async function handleAct(req) {
       revision: 0,
       elements: [],
       lastSnapshot: null,
+      fingerprint: null,
       blocker: null,
+      createdAt: Date.now(),
+      lastActivity: Date.now(),
       idempotency: new Map(),
     };
     sessions.set(session.id, session);
   } else {
     session = sessions.get(req.session_id);
     if (!session || session.owner !== owner) throw Object.assign(new Error('no such session'), { status: 404, code: 'session_not_found' });
+    session.lastActivity = Date.now();
     if (req.request_id && session.idempotency.has(req.request_id)) return session.idempotency.get(req.request_id);
+
+    const current = await snapshot(session);
+    updateObservedState(session, current);
+    projectSnapshot(session, current);
     if (req.expected_revision !== undefined && req.expected_revision !== session.revision) {
       return {
         request_id: req.request_id,
@@ -407,8 +427,8 @@ async function handleAct(req) {
         revision: session.revision,
         status: 'revision_conflict',
         action_results: [],
-        changed: false,
-        summary: `Stale expected_revision ${req.expected_revision}; re-observe.`,
+        changed: true,
+        summary: `Stale expected_revision ${req.expected_revision}; page state changed; re-observe.`,
       };
     }
   }
@@ -417,7 +437,9 @@ async function handleAct(req) {
   let changed = false;
   try {
     let latest = await snapshot(session);
+    updateObservedState(session, latest);
     projectSnapshot(session, latest);
+    const startingRevision = session.revision;
 
     for (let index = 0; index < (req.actions ?? []).length; index += 1) {
       const action = req.actions[index];
@@ -448,6 +470,7 @@ async function handleAct(req) {
       }
 
       latest = await snapshot(session);
+      updateObservedState(session, latest);
       projectSnapshot(session, latest);
       const interaction = new Set(['fill', 'type', 'fill_form', 'click', 'submit', 'select', 'check', 'uncheck', 'press', 'upload']);
       if (session.blocker && interaction.has(action.type)) {
@@ -470,15 +493,13 @@ async function handleAct(req) {
         changed = true;
       } else if (action.type === 'fill' || action.type === 'type') {
         const element = findTarget(session, action.target);
-        const value = action.value?.literal;
-        if (typeof value !== 'string') throw Object.assign(new Error('Takoda adapter currently accepts literal field values only'), { status: 422, code: 'secret_required' });
+        const value = literalFillValue(element, action.value);
         await driver(session.runId, { op: 'fill', selector: element.selector, value });
         changed = true;
       } else if (action.type === 'fill_form') {
         for (const field of action.fields ?? []) {
           const element = findTarget(session, field.target);
-          const value = field.value?.literal;
-          if (typeof value !== 'string') throw Object.assign(new Error('Takoda adapter currently accepts literal field values only'), { status: 422, code: 'secret_required' });
+          const value = literalFillValue(element, field.value);
           await driver(session.runId, { op: 'fill', selector: element.selector, value });
         }
         changed = true;
@@ -537,8 +558,7 @@ async function handleAct(req) {
         results.push({ index, type: action.type, status: 'completed' });
         continue;
       } else if (action.type === 'wait') {
-        const duration = Math.min(30_000, Math.max(0, action.condition?.duration_ms ?? 500));
-        await driver(session.runId, { op: 'sleep', milliseconds: duration }, duration + 2_000);
+        await waitCondition(session, action.condition, action.timeout_ms ?? 10_000);
       } else if (['back', 'forward', 'reload'].includes(action.type)) {
         await driver(session.runId, { op: action.type });
         changed = true;
@@ -548,9 +568,10 @@ async function handleAct(req) {
       results.push({ index, type: action.type, status: 'completed' });
     }
 
-    if (changed) session.revision += 1;
     latest = await snapshot(session);
+    updateObservedState(session, latest);
     const observed = projectSnapshot(session, latest);
+    changed = session.revision !== startingRevision;
     const response = {
       request_id: req.request_id,
       session_id: session.id,
@@ -578,19 +599,25 @@ async function handleObserve(req) {
   const owner = String(req.owner ?? 'anonymous').slice(0, 200);
   const session = sessions.get(req.session_id);
   if (!session || session.owner !== owner) throw Object.assign(new Error('no such session'), { status: 404, code: 'session_not_found' });
+  session.lastActivity = Date.now();
 
   const since = req.since_revision;
-  if (since !== undefined && since === session.revision && req.wait_ms) {
+  if (since !== undefined && req.wait_ms) {
     const deadline = Date.now() + Math.min(30_000, Math.max(0, req.wait_ms));
-    while (Date.now() < deadline && since === session.revision) {
+    while (Date.now() < deadline) {
+      const snap = await snapshot(session, req.max_elements ?? 200);
+      updateObservedState(session, snap);
+      const observed = projectSnapshot(session, snap, since, false);
+      if (session.revision !== since) return observed;
       await new Promise((resolve) => setTimeout(resolve, 250));
     }
-    if (since === session.revision) {
-      const snap = await snapshot(session, req.max_elements ?? 200);
-      return projectSnapshot(session, snap, since, true);
-    }
+    const snap = await snapshot(session, req.max_elements ?? 200);
+    updateObservedState(session, snap);
+    return projectSnapshot(session, snap, since, true);
   }
+
   const snap = await snapshot(session, req.max_elements ?? 200);
+  updateObservedState(session, snap);
   return projectSnapshot(session, snap, since, false);
 }
 
