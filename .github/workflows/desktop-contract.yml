@@ -71,28 +71,6 @@ jobs:
             --bin ores-common-desktop-consumer-check
 
       - name: Validate Takoda-specific substrate boundary
-        shell: bash
-        run: |
-          ruby <<'RUBY'
-          require "json"
-          require "yaml"
-
-          native = JSON.parse(File.read("appliance.json"))
-          ores = JSON.parse(File.read("ores-desktop-appliance.json"))
-          compose = YAML.safe_load(File.read(".ores-compose.yaml"), permitted_classes: [], permitted_symbols: [], aliases: false)
-
-          component = native.fetch("components").find { |item| item["name"] == "desktop-daemon" }
-          abort "native appliance missing desktop-daemon component" unless component
-          source = compose.fetch("source")
-          abort "native/source revision mismatch" unless component["rev"] == source["commit"]
-
-          daemon = compose.fetch("services").fetch("daemon")
-          env = daemon.fetch("environment")
-          abort "Takoda control API must remain loopback" unless env["TKDA_LOCAL_CONTROL_BIND"] == "127.0.0.1:18087"
-          abort "Takoda supervisor target must remain loopback" unless env["TKDA_LOCAL_SUPERVISOR_BIND"] == "127.0.0.1:18088"
-          abort "Scintilla must remain the long-lived supervisor owner" unless env["TKDA_LAUNCH_SUPERVISOR"] == "false"
-          abort "native appliance must deny arbitrary remote shell" unless native.dig("invariants", "arbitrary_remote_shell") == false
-          abort "native appliance must keep browser-control ports loopback-only" unless native.dig("invariants", "browser_control_ports_loopback_only") == true
-          abort "native common-layer pin gate drifted" unless native.dig("promotion_gates", "common_desktop_infra_pinned") == true
-          abort "ORES common revision drifted" unless ores.dig("common_layer", "revision") == ENV.fetch("ORES_COMMON_DESKTOP_REVISION")
-          RUBY
+        run: >-
+          cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml
+          contract::tests::repository_contract_is_consistent -- --exact
