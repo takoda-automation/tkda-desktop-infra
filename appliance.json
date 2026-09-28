@@ -71,7 +71,8 @@
     "playwright_local_smoke_green": false,
     "puppeteer_local_smoke_green": false,
     "selenium_local_smoke_green": false,
-    "common_desktop_infra_pinned": false,
-    "desktop_browser_network_isolation_green": false
+    "common_desktop_infra_pinned": true,
+    "desktop_browser_network_isolation_green": false,
+    "common_desktop_infra_ci_verified": false
   }
 }
