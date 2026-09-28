@@ -68,22 +68,40 @@ fi
 
 stop_stale() {
   local file="$1"
-  if [[ -f "$file" ]]; then
-    local pid
-    pid="$(cat "$file" 2>/dev/null || true)"
-    if [[ "$pid" =~ ^[0-9]+$ ]] && kill -0 "$pid" 2>/dev/null; then
-      kill "$pid" 2>/dev/null || true
-      for _ in {1..20}; do
-        kill -0 "$pid" 2>/dev/null || break
-        sleep 0.1
-      done
-    fi
+  local needle="$2"
+  [[ -f "$file" ]] || return 0
+
+  local pid command_line
+  pid="$(cat "$file" 2>/dev/null || true)"
+  if [[ ! "$pid" =~ ^[0-9]+$ ]]; then
     rm -f "$file"
+    return 0
   fi
+  if ! kill -0 "$pid" 2>/dev/null; then
+    rm -f "$file"
+    return 0
+  fi
+
+  command_line="$(ps -p "$pid" -o command= 2>/dev/null || true)"
+  if [[ -z "$command_line" || "$command_line" != *"$needle"* ]]; then
+    echo "refusing to stop pid $pid from $file because it is not owned by this browser MCP lane" >&2
+    return 1
+  fi
+
+  kill "$pid"
+  for _ in {1..30}; do
+    kill -0 "$pid" 2>/dev/null || break
+    sleep 0.1
+  done
+  if kill -0 "$pid" 2>/dev/null; then
+    echo "pid $pid from $file did not stop cleanly" >&2
+    return 1
+  fi
+  rm -f "$file"
 }
-stop_stale "$STATE/run/browser-mcp-adapter.pid"
-stop_stale "$STATE/run/browser-mcp-gateway.pid"
-stop_stale "$STATE/run/cloudflared.pid"
+stop_stale "$STATE/run/browser-mcp-adapter.pid" "adapter.mjs"
+stop_stale "$STATE/run/browser-mcp-gateway.pid" "browser-mcp"
+stop_stale "$STATE/run/cloudflared.pid" "cloudflared"
 
 export TKDA_LOCAL_CONTROL_TOKEN_FILE
 export TKDA_BROWSER_MCP_ADAPTER_BIND="${TKDA_BROWSER_MCP_ADAPTER_BIND:-127.0.0.1:18090}"
