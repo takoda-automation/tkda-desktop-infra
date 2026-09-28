@@ -3,14 +3,22 @@
   "channel": "candidate",
   "promotion_gate": "all referenced component CI and cross-repo desktop E2E must be green before promotion",
   "substrate": {
-    "repo": "scintilla-run/scintilla-desktop-infra",
-    "rev": "92da57fa98ec2781b689062f88cad732d7d87651",
+    "repo": "scintilla-run/scintilla-desktop-daemon",
+    "rev": "77f6910c105ef5de072c252cb063006332417e29",
     "protocol": "scintilla.local-control/v1",
     "daemon_url": "http://127.0.0.1:8765",
     "ingress_url": "http://127.0.0.1:8091",
     "status": "contract-pinned-runtime-candidate-not-yet-promoted"
   },
   "components": [
+    {
+      "name": "scintilla-desktop-daemon",
+      "repo": "scintilla-run/scintilla-desktop-daemon",
+      "rev": "77f6910c105ef5de072c252cb063006332417e29",
+      "pull_request": 4,
+      "kind": "rust-binary",
+      "runtime_role": "machine-level-host-and-container-lifecycle"
+    },
     {
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
@@ -49,7 +57,7 @@
     {
       "name": "scintilla-desktop-infra",
       "repo": "scintilla-run/scintilla-desktop-infra",
-      "rev": "92da57fa98ec2781b689062f88cad732d7d87651",
+      "rev": "f8d1494ce6444d373db9286a59b6796e09524257",
       "kind": "integration"
     }
   ],
