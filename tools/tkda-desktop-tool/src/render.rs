@@ -272,8 +272,16 @@ mod tests {
         ))
         .unwrap();
         let workers = example["workers"].as_array().unwrap();
-        assert!(workers.iter().any(|worker| worker["id"] == "takoda-main-supervisor"));
-        assert!(!workers.iter().any(|worker| worker["id"] == "tkda-local-supervisor"));
+        assert!(
+            workers
+                .iter()
+                .any(|worker| worker["id"] == "takoda-main-supervisor")
+        );
+        assert!(
+            !workers
+                .iter()
+                .any(|worker| worker["id"] == "tkda-local-supervisor")
+        );
     }
 
     #[test]
