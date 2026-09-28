@@ -10,7 +10,7 @@ TOOL_MANIFEST="$ROOT/tools/tkda-desktop-tool/Cargo.toml"
 mkdir -p "$SRC" "$BIN" "$CONFIG" "$STATE/logs"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing required tool: $1" >&2; exit 1; }; }
-for tool in git cargo node npm go; do need "$tool"; done
+for tool in git cargo node npm go curl; do need "$tool"; done
 
 TKDA_APPLIANCE_JSON="$ROOT/appliance.json" TKDA_COMPONENT_ROOT="$SRC" cargo run --quiet --release --manifest-path "$TOOL_MANIFEST" --bin tkda-desktop-materialize
 
@@ -48,6 +48,10 @@ export TKDA_RUST_WORKER_BIN="$BIN/tkda-rust-worker"
 export TKDA_GO_WORKER_BIN="$BIN/tkda-go-worker"
 export TKDA_LOCAL_CONTROL_TOKEN_FILE="$TOKEN_FILE"
 export SCINTILLA_DESKTOP_INFRA_ROOT="$SRC/scintilla-desktop-infra"
+# Optional remote ingress. Keep the token in a chmod 0600 file outside the repo.
+# export TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE="$HOME/.config/takoda/cloudflare-tunnel.token"
+# export TKDA_CLOUDFLARE_PUBLIC_HOSTNAME="takoda-browser.example.com"
+# export TKDA_CLOUDFLARE_METRICS_ADDR="127.0.0.1:20241"
 export PATH="$BIN:\$PATH"
 EOF
 
