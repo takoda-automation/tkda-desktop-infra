@@ -32,7 +32,7 @@
   "promotion_gates": {
     "daemon_lockfile_committed": false,
     "public_ingress_ready": false,
-    "scintilla_substrate_in_compose_graph": false,
+    "scintilla_substrate_in_compose_graph": true,
     "common_layer_pinned": true,
     "common_layer_ci_verified": false
   },
