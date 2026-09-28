@@ -28,3 +28,9 @@ if [[ -n "${SCINTILLA_DESKTOP_INFRA_ROOT:-}" ]] && [[ -x "$SCINTILLA_DESKTOP_INF
   export SCINTILLA_DESKTOP_STATE="${SCINTILLA_DESKTOP_STATE:-$STATE/scintilla}"
   "$SCINTILLA_DESKTOP_INFRA_ROOT/scripts/status.sh" || true
 fi
+
+if [[ "${TKDA_CLOUDFLARE_TUNNEL_ENABLED:-false}" == "true" ]]; then
+  bash "$ROOT/scripts/cloudflare-tunnel.sh" status || true
+else
+  echo "cloudflared: disabled"
+fi
