@@ -80,6 +80,7 @@ jobs:
 
           abort "native appliance must deny arbitrary remote shell" unless native.dig("invariants", "arbitrary_remote_shell") == false
           abort "native appliance must keep browser control loopback-only" unless native.dig("invariants", "browser_control_ports_loopback_only") == true
+          abort "native Takoda promotion must also wait for common desktop infra" unless native.dig("promotion_gates", "common_desktop_infra_pinned") == false || common["status"] == "pinned"
 
           abort "ORES projection must not require a public IP" unless ores.dig("host", "requires_public_ip") == false
           abort "Takoda must remain outbound-agent-only" unless ores.dig("cloudflare", "mode") == "not-required"
