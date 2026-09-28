@@ -11,12 +11,25 @@ mkdir -p "$STATE/logs" "$CONFIG_DIR"
 chmod 700 "$CONFIG_DIR"
 umask 077
 
+require_private_regular_file_or_absent() {
+  local path="$1"
+  if [[ -L "$path" ]]; then
+    echo "refusing symlinked secret path: $path" >&2
+    exit 1
+  fi
+  if [[ -e "$path" && ! -f "$path" ]]; then
+    echo "secret path is not a regular file: $path" >&2
+    exit 1
+  fi
+}
+
 generate_secret() {
   local path="$1"
+  require_private_regular_file_or_absent "$path"
   if [[ ! -s "$path" ]]; then
     openssl rand -hex 48 >"$path"
-    chmod 600 "$path"
   fi
+  chmod 600 "$path"
 }
 
 WORKER_SECRET_FILE="$CONFIG_DIR/browser-mcp-worker.secret"
@@ -27,8 +40,22 @@ PROFILE_DIR="$CONFIG_DIR/browser-profile"
 generate_secret "$WORKER_SECRET_FILE"
 generate_secret "$SIGNING_SECRET_FILE"
 generate_secret "$OPERATOR_SECRET_FILE"
+if [[ -L "$PROFILE_DIR" ]]; then
+  echo "refusing symlinked browser profile directory: $PROFILE_DIR" >&2
+  exit 1
+fi
 mkdir -p "$PROFILE_DIR"
+[[ -d "$PROFILE_DIR" ]] || { echo "browser profile path is not a directory: $PROFILE_DIR" >&2; exit 1; }
 chmod 700 "$PROFILE_DIR"
+
+if [[ -L "$BROWSER_ENV" ]]; then
+  echo "refusing symlinked browser MCP env path: $BROWSER_ENV" >&2
+  exit 1
+fi
+if [[ -e "$BROWSER_ENV" && ! -f "$BROWSER_ENV" ]]; then
+  echo "browser MCP env path is not a regular file: $BROWSER_ENV" >&2
+  exit 1
+fi
 
 if [[ ! -f "$BROWSER_ENV" ]]; then
   cat >"$BROWSER_ENV" <<EOF
@@ -46,8 +73,8 @@ export BROWSER_MCP_OAUTH_REDIS_URL='redis://127.0.0.1:6379/4'
 export TKDA_BROWSER_MCP_ALLOWED_DOMAINS='news.ycombinator.com,greenhouse.io,boards.greenhouse.io,job-boards.greenhouse.io,ashbyhq.com,jobs.ashbyhq.com,lever.co,jobs.lever.co,workday.com,myworkdayjobs.com,smartrecruiters.com,icims.com,jobvite.com,workable.com,bamboohr.com,recruitee.com,applytojob.com,ats.rippling.com,breezy.hr,jobscore.com,linkedin.com,licdn.com,indeed.com,indeedassets.com,glassdoor.com,wellfound.com,angel.co'
 export TKDA_BROWSER_ALLOWED_DOMAINS='news.ycombinator.com,greenhouse.io,boards.greenhouse.io,job-boards.greenhouse.io,ashbyhq.com,jobs.ashbyhq.com,lever.co,jobs.lever.co,workday.com,myworkdayjobs.com,smartrecruiters.com,icims.com,jobvite.com,workable.com,bamboohr.com,recruitee.com,applytojob.com,ats.rippling.com,breezy.hr,jobscore.com,linkedin.com,licdn.com,indeed.com,indeedassets.com,glassdoor.com,wellfound.com,angel.co'
 EOF
-  chmod 600 "$BROWSER_ENV"
 fi
+chmod 600 "$BROWSER_ENV"
 
 echo "browser MCP local secrets initialized"
 echo "config: $BROWSER_ENV"
