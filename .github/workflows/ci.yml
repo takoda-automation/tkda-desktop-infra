@@ -27,4 +27,4 @@ jobs:
       - run: cargo fmt --manifest-path tools/tkda-desktop-tool/Cargo.toml --all -- --check
       - run: cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml --all-targets
       - run: cargo clippy --manifest-path tools/tkda-desktop-tool/Cargo.toml --all-targets -- -D warnings
-      - run: bash -n scripts/bootstrap.sh scripts/up.sh scripts/down.sh scripts/status.sh
+      - run: bash -n scripts/bootstrap.sh scripts/up.sh scripts/down.sh scripts/status.sh scripts/cloudflare-tunnel.sh
