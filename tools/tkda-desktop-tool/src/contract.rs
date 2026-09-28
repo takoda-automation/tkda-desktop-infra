@@ -122,8 +122,24 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             .invariants
             .get("browser_control_ports_loopback_only")
             != Some(&Value::Bool(true))
+        || appliance
+            .invariants
+            .get("remote_cloudflare_origin_not_locally_provable")
+            != Some(&Value::Bool(true))
     {
         return Err("native security invariants drifted".into());
+    }
+
+    let native_json: Value = read_json(root.join("appliance.json"))?;
+    if native_json
+        .pointer("/promotion_gates/cloudflare_route_and_access_policy_reviewed")
+        .and_then(Value::as_bool)
+        != Some(false)
+    {
+        return Err(
+            "Cloudflare route/Access gate must remain false without external reviewed evidence"
+                .into(),
+        );
     }
 
     if ores.get("schema").and_then(Value::as_str) != Some("ores.desktop-appliance/v1")
@@ -221,7 +237,6 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     if !native_common_gate {
         return Err("native appliance invariants missing".into());
     }
-    let native_json: Value = read_json(root.join("appliance.json"))?;
     if native_json
         .pointer("/promotion_gates/common_desktop_infra_pinned")
         .and_then(Value::as_bool)
@@ -274,6 +289,14 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             return Err(format!("forbidden Python tooling remains: {forbidden}"));
         }
     }
+    let tunnel_helper =
+        fs::read_to_string(root.join("scripts/cloudflare-tunnel.sh")).map_err(|e| e.to_string())?;
+    if !tunnel_helper.contains("TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port")
+        || !tunnel_helper.contains("tunnel token file must not be readable or writable by group/other users")
+    {
+        return Err("Cloudflare local helper hardening drifted".into());
+    }
+
     for checked in [
         "scripts/bootstrap.sh",
         ".github/workflows/ci.yml",
