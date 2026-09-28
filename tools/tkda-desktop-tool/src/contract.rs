@@ -208,7 +208,10 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
                 .get("revision")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "pinned common desktop layer revision missing".to_owned())?;
-            if revision != "7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c" || !is_sha(revision) || !common_gate {
+            if revision != "7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c"
+                || !is_sha(revision)
+                || !common_gate
+            {
                 return Err(
                     "pinned common desktop layer must use the audited immutable SHA and green pin gate".into(),
                 );
