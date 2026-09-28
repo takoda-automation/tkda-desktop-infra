@@ -319,7 +319,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         ] {
             let source = fs::read_to_string(root.join(script)).map_err(|e| e.to_string())?;
             if !source.contains("ps -p") {
-                return Err(format!("{script} must validate PID ownership before process control"));
+                return Err(format!(
+                    "{script} must validate PID ownership before process control"
+                ));
             }
         }
 
@@ -327,7 +329,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             .map_err(|e| e.to_string())?;
         if !up.contains("TKDA_K8S_CLUSTER_REVISION")
             || !up.contains("rev-parse HEAD")
-            || !up.contains("status --porcelain --untracked-files=all -- remote/deployments/browser-mcp-rs")
+            || !up.contains(
+                "status --porcelain --untracked-files=all -- remote/deployments/browser-mcp-rs",
+            )
         {
             return Err("browser MCP gateway source must be pinned and clean before launch".into());
         }
@@ -341,7 +345,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             "TKDA_BROWSER_MCP_ALLOWED_DOMAINS",
         ] {
             if !adapter.contains(required) {
-                return Err(format!("browser MCP adapter missing domain-ceiling guard: {required}"));
+                return Err(format!(
+                    "browser MCP adapter missing domain-ceiling guard: {required}"
+                ));
             }
         }
     }
