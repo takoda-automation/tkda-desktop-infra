@@ -40,6 +40,7 @@ struct ComposeService {
     runtime: String,
     build: Option<Vec<Vec<String>>>,
     command: Vec<String>,
+    depends_on: Option<Vec<String>>,
     inherit_env: Option<Vec<String>>,
     environment: Option<BTreeMap<String, String>>,
 }
@@ -81,10 +82,25 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         return Err("native/source daemon repo or revision mismatch".into());
     }
 
+    let scintilla = compose
+        .services
+        .get("scintilla")
+        .ok_or_else(|| "compose Scintilla substrate service missing".to_owned())?;
+    if scintilla.runtime != "host"
+        || scintilla.command != vec!["scintilla-desktop-daemon".to_owned()]
+    {
+        return Err("Scintilla substrate runtime/command contract drifted".into());
+    }
+
     let daemon = compose
         .services
         .get("daemon")
         .ok_or_else(|| "compose daemon service missing".to_owned())?;
+    if daemon.depends_on.as_deref()
+        != Some(&["scintilla".to_owned()])
+    {
+        return Err("Takoda daemon must depend on the Scintilla substrate".into());
+    }
     if daemon.runtime != "host"
         || daemon.build.as_ref()
             != Some(&vec![vec![
@@ -103,6 +119,7 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "TKDA_AGENT_ID",
         "TKDA_AGENT_TOKEN_FILE",
         "TKDA_LOCAL_CONTROL_TOKEN_FILE",
+        "TKDA_SCINTILLA_TOKEN_FILE",
     ] {
         if !inherited.iter().any(|value| value == required) {
             return Err(format!("required inherited input missing: {required}"));
@@ -115,7 +132,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         .ok_or_else(|| "daemon environment missing".to_owned())?;
     expect_env(daemon_env, "TKDA_LOCAL_CONTROL_BIND", "127.0.0.1:18087")?;
     expect_env(daemon_env, "TKDA_LOCAL_SUPERVISOR_BIND", "127.0.0.1:18088")?;
-    expect_env(daemon_env, "TKDA_LAUNCH_SUPERVISOR", "false")?;
+    expect_env(daemon_env, "TKDA_SUPERVISOR_RUNTIME", "scintilla")?;
+    expect_env(daemon_env, "TKDA_SCINTILLA_URL", "http://127.0.0.1:8765")?;
+    expect_env(daemon_env, "TKDA_LAUNCH_SUPERVISOR", "true")?;
 
     if appliance.invariants.get("arbitrary_remote_shell") != Some(&Value::Bool(false))
         || appliance
@@ -136,6 +155,10 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             .pointer("/cloudflare/public_ingress_ready")
             .and_then(Value::as_bool)
             != Some(false)
+        || ores
+            .pointer("/promotion_gates/scintilla_substrate_in_compose_graph")
+            .and_then(Value::as_bool)
+            != Some(true)
         || ores
             .pointer("/cloudflare/origin_auth")
             .and_then(Value::as_str)
