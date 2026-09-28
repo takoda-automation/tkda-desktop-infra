@@ -13,13 +13,24 @@ source "$BROWSER_ENV"
 : "${TKDA_CLOUDFLARE_TUNNEL:?TKDA_CLOUDFLARE_TUNNEL is required}"
 command -v cloudflared >/dev/null 2>&1 || { echo "missing cloudflared" >&2; exit 1; }
 
+[[ "$TKDA_BROWSER_MCP_HOSTNAME" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]] \
+  && [[ "$TKDA_BROWSER_MCP_HOSTNAME" == *.* ]] \
+  && [[ "$TKDA_BROWSER_MCP_HOSTNAME" != *..* ]] || {
+  echo "TKDA_BROWSER_MCP_HOSTNAME must be a lowercase DNS hostname" >&2
+  exit 1
+}
+[[ "$TKDA_CLOUDFLARE_TUNNEL" =~ ^[A-Za-z0-9._-]{1,128}$ ]] || {
+  echo "TKDA_CLOUDFLARE_TUNNEL contains unsupported characters" >&2
+  exit 1
+}
+
 if ! cloudflared tunnel info "$TKDA_CLOUDFLARE_TUNNEL" >/dev/null 2>&1; then
   echo "Cloudflare browser authentication is required once for this machine."
   cloudflared tunnel login
   cloudflared tunnel create "$TKDA_CLOUDFLARE_TUNNEL"
 fi
 
-cloudflared tunnel route dns "$TKDA_CLOUDFLARE_TUNNEL" "$TKDA_BROWSER_MCP_HOSTNAME" || true
+cloudflared tunnel route dns "$TKDA_CLOUDFLARE_TUNNEL" "$TKDA_BROWSER_MCP_HOSTNAME"
 
 echo "Cloudflare tunnel prepared: $TKDA_CLOUDFLARE_TUNNEL"
 echo "canonical OAuth MCP endpoint: https://$TKDA_BROWSER_MCP_HOSTNAME"
