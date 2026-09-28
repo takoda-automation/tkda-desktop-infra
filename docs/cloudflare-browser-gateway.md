@@ -1,6 +1,8 @@
 # Cloudflare browser gateway
 
-Takoda's preferred desktop control path is still the daemon's outbound authenticated WebSocket to the hosted control plane. A Cloudflare Tunnel is optional and exists for callers that need an HTTPS endpoint for submitting local browser runs, such as an external job-search scheduler.
+Takoda's preferred desktop control path is still the daemon's outbound authenticated WebSocket to the hosted control plane. A Cloudflare Tunnel is optional and exists for trusted machine clients that need an HTTPS endpoint for submitting local browser runs.
+
+For the ORESoftware job-search pipeline, keep `https://browser-mcp.oresoftware.com/mcp` as the stable public endpoint. That OAuth-protected MCP surface exposes the narrow `browser_state` / `browser_act` contract and should call Takoda through an adapter. Do not repoint that hostname directly at port 18087; the direct daemon gateway described below is an infrastructure/control-plane escape hatch, not the public model-facing API.
 
 ## Security model
 
