@@ -39,7 +39,9 @@ pub fn ensure_token_from_env() -> Result<(), String> {
 
     let mut options = OpenOptions::new();
     options.write(true).truncate(true).create(true);
-    let mut file = options.open(&path).map_err(|e| format!("open token file: {e}"))?;
+    let mut file = options
+        .open(&path)
+        .map_err(|e| format!("open token file: {e}"))?;
     writeln!(file, "{token}").map_err(|e| format!("write token file: {e}"))?;
     harden_mode_0600(&path)
 }
