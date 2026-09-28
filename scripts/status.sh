@@ -29,8 +29,8 @@ if [[ -n "${SCINTILLA_DESKTOP_INFRA_ROOT:-}" ]] && [[ -x "$SCINTILLA_DESKTOP_INF
   "$SCINTILLA_DESKTOP_INFRA_ROOT/scripts/status.sh" || true
 fi
 
-if [[ -n "${TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE:-}" ]] && [[ -x "$ROOT/scripts/cloudflare-tunnel.sh" ]]; then
-  "$ROOT/scripts/cloudflare-tunnel.sh" status || true
+if [[ -n "${TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE:-}" ]] && [[ -f "$ROOT/scripts/cloudflare-tunnel.sh" ]]; then
+  bash "$ROOT/scripts/cloudflare-tunnel.sh" status || true
 fi
 if [[ -n "${TKDA_CLOUDFLARE_PUBLIC_HOSTNAME:-}" ]]; then
   echo "takoda remote ingress: https://${TKDA_CLOUDFLARE_PUBLIC_HOSTNAME}"
