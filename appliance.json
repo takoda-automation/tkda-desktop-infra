@@ -73,6 +73,7 @@
     "playwright_local_smoke_green": false,
     "puppeteer_local_smoke_green": false,
     "selenium_local_smoke_green": false,
-    "supervisor_auth_candidate_wired": true
+    "supervisor_auth_candidate_wired": true,
+    "browser_worker_lockfile_committed": false
   }
 }
