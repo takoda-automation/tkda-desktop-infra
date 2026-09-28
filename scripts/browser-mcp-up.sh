@@ -22,6 +22,13 @@ source "$BROWSER_ENV"
 : "${BROWSER_MCP_OAUTH_SIGNING_SECRET_FILE:?BROWSER_MCP_OAUTH_SIGNING_SECRET_FILE is required}"
 : "${BROWSER_MCP_OAUTH_OPERATOR_SECRET_FILE:?BROWSER_MCP_OAUTH_OPERATOR_SECRET_FILE is required}"
 : "${TKDA_BROWSER_MCP_ALLOWED_DOMAINS:?TKDA_BROWSER_MCP_ALLOWED_DOMAINS is required}"
+: "${TKDA_BROWSER_ALLOWED_DOMAINS:?TKDA_BROWSER_ALLOWED_DOMAINS is required}"
+: "${TKDA_PLAYWRIGHT_USER_DATA_DIR:?TKDA_PLAYWRIGHT_USER_DATA_DIR is required}"
+: "${TKDA_SCINTILLA_RUNTIME_MANIFEST:?TKDA_SCINTILLA_RUNTIME_MANIFEST is required}"
+[[ "$TKDA_BROWSER_MCP_ALLOWED_DOMAINS" == "$TKDA_BROWSER_ALLOWED_DOMAINS" ]] || {
+  echo "gateway and worker browser-domain ceilings differ; refusing to start" >&2
+  exit 1
+}
 : "${TKDA_BROWSER_MCP_HOSTNAME:?TKDA_BROWSER_MCP_HOSTNAME is required}"
 : "${TKDA_CLOUDFLARE_TUNNEL:?TKDA_CLOUDFLARE_TUNNEL is required}"
 
@@ -31,6 +38,23 @@ done
 
 mkdir -p "$STATE/logs" "$STATE/run"
 chmod 700 "$STATE/run"
+
+node - "$TKDA_SCINTILLA_RUNTIME_MANIFEST" "$TKDA_PLAYWRIGHT_USER_DATA_DIR" "$TKDA_BROWSER_ALLOWED_DOMAINS" <<'NODE'
+import { readFileSync } from 'node:fs';
+const [manifestPath, expectedProfile, expectedDomains] = process.argv.slice(2);
+const manifest = JSON.parse(readFileSync(manifestPath, 'utf8'));
+const supervisor = (manifest.workers ?? []).find((worker) =>
+  ['takoda-main-supervisor', 'tkda-local-supervisor'].includes(worker.id)
+);
+if (!supervisor) throw new Error('Scintilla manifest is missing the Takoda main supervisor');
+const actualProfile = supervisor.command?.env?.TKDA_PLAYWRIGHT_USER_DATA_DIR ?? '';
+const actualDomains = supervisor.command?.env?.TKDA_BROWSER_ALLOWED_DOMAINS ?? '';
+if (actualProfile !== expectedProfile || actualDomains !== expectedDomains) {
+  throw new Error(
+    'Scintilla manifest does not contain the current browser profile/domain policy; source .desktop/browser-mcp.env and rerun tkda-desktop-render, then restart scripts/up.sh',
+  );
+}
+NODE
 
 TOKEN="$(tr -d '\r\n' <"$TKDA_LOCAL_CONTROL_TOKEN_FILE")"
 curl --fail --silent -H "Authorization: Bearer $TOKEN" http://127.0.0.1:18087/v1/status >/dev/null || {
