@@ -91,6 +91,7 @@ pub fn render_manifest(config: &RenderConfig) -> Result<Value, String> {
                             .as_ref()
                             .map(|path| path_string(path))
                             .transpose()?
+                            .unwrap_or_default()
                     }
                 },
                 "stop": {"timeout_seconds": 20}
