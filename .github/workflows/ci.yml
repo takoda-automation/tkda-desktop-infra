@@ -9,11 +9,15 @@ permissions:
   contents: read
 
 jobs:
-  manifest-contract:
+  rust-tooling:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          python-version: "3.12"
-      - run: python3 tests/manifest-contract/check.py
+          toolchain: 1.88.0
+          components: rustfmt, clippy
+      - run: cargo fmt --manifest-path tools/tkda-desktop-tool/Cargo.toml --all -- --check
+      - run: cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml --all-targets
+      - run: cargo clippy --manifest-path tools/tkda-desktop-tool/Cargo.toml --all-targets -- -D warnings
+      - run: bash -n scripts/bootstrap.sh scripts/up.sh scripts/down.sh scripts/status.sh
