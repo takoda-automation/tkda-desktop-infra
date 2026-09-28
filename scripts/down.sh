@@ -5,6 +5,10 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE="${TKDA_DESKTOP_STATE:-$ROOT/.desktop}"
 ENV_FILE="${TKDA_DESKTOP_ENV:-$STATE/env}"
 
+if [[ -x "$ROOT/scripts/cloudflare-tunnel.sh" ]]; then
+  "$ROOT/scripts/cloudflare-tunnel.sh" stop || true
+fi
+
 if [[ -f "$STATE/tkda-daemon.pid" ]]; then
   pid="$(cat "$STATE/tkda-daemon.pid")"
   kill "$pid" 2>/dev/null || true
