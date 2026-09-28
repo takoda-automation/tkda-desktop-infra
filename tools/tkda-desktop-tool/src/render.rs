@@ -180,8 +180,14 @@ fn absolute_regular_file(key: &str) -> Result<PathBuf, String> {
 fn absolute_directory(key: &str) -> Result<PathBuf, String> {
     let raw = env::var(key).map_err(|_| format!("{key} is required"))?;
     let path = PathBuf::from(raw);
-    if !path.is_absolute() || !path.is_dir() {
+    if !path.is_absolute() {
         return Err(format!("{key} must be an existing absolute directory"));
+    }
+    let meta = fs::symlink_metadata(&path).map_err(|e| format!("{key}: {e}"))?;
+    if !meta.file_type().is_dir() || meta.file_type().is_symlink() {
+        return Err(format!(
+            "{key} must reference an existing non-symlink directory"
+        ));
     }
     Ok(path)
 }
@@ -191,6 +197,13 @@ fn absolute_output_path(key: &str) -> Result<PathBuf, String> {
     let path = PathBuf::from(raw);
     if !path.is_absolute() {
         return Err(format!("{key} must be absolute"));
+    }
+    if let Ok(meta) = fs::symlink_metadata(&path) {
+        if meta.file_type().is_symlink() || !meta.file_type().is_file() {
+            return Err(format!(
+                "{key} must reference a regular non-symlink file when it already exists"
+            ));
+        }
     }
     Ok(path)
 }
