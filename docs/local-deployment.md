@@ -18,9 +18,9 @@ ores-compose plan .ores-compose.yaml
 ores-compose up .ores-compose.yaml
 ```
 
-The compose source pin must equal the native appliance's `desktop-daemon` component revision. The daemon binds only to `127.0.0.1:18087`.
+The compose source pin must equal the native appliance's `desktop-daemon` component revision. The Takoda daemon binds only to `127.0.0.1:18087`; Scintilla binds its authenticated local-control API to `127.0.0.1:8765`. The Scintilla bearer is read from `TKDA_SCINTILLA_TOKEN_FILE` or the daemon's default protected token path and is never sent to the Takoda cloud control plane.
 
-`TKDA_LAUNCH_SUPERVISOR=false` is explicit: Takoda does not create a second long-lived process scheduler. Scintilla remains the owner of `tkda-main-server` and other long-lived local processes. The full substrate is still brought up through the native Takoda/Scintilla appliance path until that multi-repo graph is represented directly in ORES Compose.
+`ores-compose` now starts `scintilla-desktop-daemon` before the Takoda daemon. Takoda sets `TKDA_SUPERVISOR_RUNTIME=scintilla` and `TKDA_LAUNCH_SUPERVISOR=true`; that means Takoda still decides that the trusted `tkda-main-server` supervisor is required, but Scintilla owns the underlying host-process lifecycle through its authenticated loopback worker API. The Takoda job transport remains `execution_target=local`.
 
 ## Connectivity and secrets
 
