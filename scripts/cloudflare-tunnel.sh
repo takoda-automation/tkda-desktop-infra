@@ -18,13 +18,20 @@ LOG_FILE="$STATE/logs/cloudflared.log"
 METRICS_ADDR="${TKDA_CLOUDFLARE_METRICS_ADDR:-127.0.0.1:20241}"
 
 validate_metrics_addr() {
-  case "$METRICS_ADDR" in
-    127.0.0.1:[0-9]*|localhost:[0-9]*|"[::1]":[0-9]*) ;;
-    *)
-      echo "TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port" >&2
-      exit 1
-      ;;
-  esac
+  local port
+  if [[ "$METRICS_ADDR" =~ ^127\.0\.0\.1:([0-9]{1,5})$ ]]; then
+    port="${BASH_REMATCH[1]}"
+  elif [[ "$METRICS_ADDR" =~ ^\[::1\]:([0-9]{1,5})$ ]]; then
+    port="${BASH_REMATCH[1]}"
+  else
+    echo "TKDA_CLOUDFLARE_METRICS_ADDR must use literal loopback 127.0.0.1 or [::1]" >&2
+    exit 1
+  fi
+
+  if (( 10#$port < 1 || 10#$port > 65535 )); then
+    echo "TKDA_CLOUDFLARE_METRICS_ADDR port must be between 1 and 65535" >&2
+    exit 1
+  fi
 }
 
 is_running() {
@@ -77,7 +84,13 @@ case "$ACTION" in
     fi
 
     rm -f "$PID_FILE"
-    nohup "$CLOUDFLARED_BIN" tunnel       --no-autoupdate       --metrics "$METRICS_ADDR"       --loglevel info       run       --token-file "$TOKEN_FILE"       >>"$LOG_FILE" 2>&1 &
+    nohup "$CLOUDFLARED_BIN" tunnel \
+      --no-autoupdate \
+      --metrics "$METRICS_ADDR" \
+      --loglevel info \
+      run \
+      --token-file "$TOKEN_FILE" \
+      >>"$LOG_FILE" 2>&1 &
     echo $! >"$PID_FILE"
 
     for _ in {1..80}; do
