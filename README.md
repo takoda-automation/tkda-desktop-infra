@@ -177,3 +177,18 @@ Application-layer URL validation in the Playwright/Puppeteer worker is defense i
 Cloud workers are protected by the Kubernetes egress NetworkPolicy in `tkda-infra`. Desktop promotion therefore has a separate `desktop_browser_network_isolation_green` gate. Keep it false until the Scintilla/desktop substrate proves an OS/runtime-level egress boundary that blocks loopback, link-local, private RFC1918/ULA, metadata, and other special-use destinations for browser child processes while preserving public web access.
 
 Do not mark three-browser desktop E2E as production-safe based only on JavaScript hostname/DNS checks.
+
+
+## Optional Cloudflare browser gateway
+
+For schedulers that need an HTTPS endpoint into a user-owned desktop, Takoda can run a remotely-managed Cloudflare Tunnel in front of the authenticated loopback daemon. This is optional: the normal desktop-agent path remains the outbound authenticated WebSocket and needs no public IP or inbound firewall rule.
+
+When enabled, publish **only** `http://127.0.0.1:18087`, protect the hostname with Cloudflare Access, require a machine service token, and retain the Takoda bearer as a second independent authentication layer. Never publish the supervisor, Scintilla, ChromeDriver, CDP, or WebDriver ports.
+
+See [docs/cloudflare-browser-gateway.md](docs/cloudflare-browser-gateway.md). The lifecycle helper is:
+
+```sh
+./scripts/cloudflare-tunnel.sh doctor
+TKDA_CLOUDFLARE_TUNNEL_ENABLED=true ./scripts/up.sh
+./scripts/status.sh
+```
