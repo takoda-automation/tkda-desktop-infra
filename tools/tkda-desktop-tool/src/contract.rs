@@ -118,18 +118,31 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     expect_env(daemon_env, "TKDA_LAUNCH_SUPERVISOR", "false")?;
 
     if appliance.invariants.get("arbitrary_remote_shell") != Some(&Value::Bool(false))
-        || appliance.invariants.get("browser_control_ports_loopback_only") != Some(&Value::Bool(true))
+        || appliance
+            .invariants
+            .get("browser_control_ports_loopback_only")
+            != Some(&Value::Bool(true))
     {
         return Err("native security invariants drifted".into());
     }
 
     if ores.get("schema").and_then(Value::as_str) != Some("ores.desktop-appliance/v1")
-        || ores.pointer("/host/requires_public_ip").and_then(Value::as_bool) != Some(false)
+        || ores
+            .pointer("/host/requires_public_ip")
+            .and_then(Value::as_bool)
+            != Some(false)
         || ores.pointer("/cloudflare/mode").and_then(Value::as_str) != Some("not-required")
-        || ores.pointer("/cloudflare/public_ingress_ready").and_then(Value::as_bool) != Some(false)
-        || ores.pointer("/cloudflare/origin_auth").and_then(Value::as_str)
+        || ores
+            .pointer("/cloudflare/public_ingress_ready")
+            .and_then(Value::as_bool)
+            != Some(false)
+        || ores
+            .pointer("/cloudflare/origin_auth")
+            .and_then(Value::as_str)
             != Some("outbound-agent-only")
-        || !ores.pointer("/orchestrator/public_config").is_some_and(Value::is_null)
+        || !ores
+            .pointer("/orchestrator/public_config")
+            .is_some_and(Value::is_null)
         || ores
             .pointer("/promotion_gates/daemon_lockfile_committed")
             .and_then(Value::as_bool)
@@ -158,7 +171,10 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         .pointer("/properties/execution/properties/pairs/items/properties/language/enum")
         .and_then(Value::as_array)
         .ok_or_else(|| "runtime language enum missing".to_owned())?;
-    let language_values = languages.iter().filter_map(Value::as_str).collect::<Vec<_>>();
+    let language_values = languages
+        .iter()
+        .filter_map(Value::as_str)
+        .collect::<Vec<_>>();
     if language_values != ["typescript", "python", "go", "rust"] {
         return Err("runtime language enum drifted".into());
     }
@@ -199,10 +215,8 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
 }
 
 fn read_json<T: for<'de> Deserialize<'de>>(path: PathBuf) -> Result<T, String> {
-    serde_json::from_slice(
-        &fs::read(&path).map_err(|e| format!("read {}: {e}", path.display()))?,
-    )
-    .map_err(|e| format!("parse {}: {e}", path.display()))
+    serde_json::from_slice(&fs::read(&path).map_err(|e| format!("read {}: {e}", path.display()))?)
+        .map_err(|e| format!("parse {}: {e}", path.display()))
 }
 
 fn expect_env(env: &BTreeMap<String, String>, key: &str, expected: &str) -> Result<(), String> {
