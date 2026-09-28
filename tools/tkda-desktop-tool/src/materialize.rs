@@ -1,6 +1,5 @@
 use std::{
-    env,
-    fs,
+    env, fs,
     path::{Path, PathBuf},
     process::Command,
 };
@@ -45,7 +44,10 @@ pub fn materialize_from_env() -> Result<(), String> {
                 return Err(format!("{}: origin mismatch", component.name));
             }
         } else if dest.exists() {
-            return Err(format!("{} exists but is not a Git checkout", dest.display()));
+            return Err(format!(
+                "{} exists but is not a Git checkout",
+                dest.display()
+            ));
         } else {
             run(
                 Command::new("git").args([
@@ -86,7 +88,10 @@ pub fn materialize_from_env() -> Result<(), String> {
             "verify revision",
         )?;
         if actual.trim() != component.rev {
-            return Err(format!("{}: exact revision verification failed", component.name));
+            return Err(format!(
+                "{}: exact revision verification failed",
+                component.name
+            ));
         }
     }
 
@@ -103,10 +108,16 @@ fn validate_component(component: &Component) -> Result<(), String> {
         || component.repo.contains("..")
         || component.repo.chars().any(char::is_whitespace)
     {
-        return Err(format!("component repo is outside allowed organizations: {}", component.repo));
+        return Err(format!(
+            "component repo is outside allowed organizations: {}",
+            component.repo
+        ));
     }
     if !is_sha(&component.rev) {
-        return Err(format!("{} revision is not exact lowercase 40-hex", component.name));
+        return Err(format!(
+            "{} revision is not exact lowercase 40-hex",
+            component.name
+        ));
     }
     Ok(())
 }
