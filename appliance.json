@@ -4,7 +4,7 @@
   "promotion_gate": "all referenced component CI and cross-repo desktop E2E must be green before promotion",
   "substrate": {
     "repo": "scintilla-run/scintilla-desktop-infra",
-    "rev": "4fe14263b2fa11ab7f13f3144701a491083bbce6",
+    "rev": "6226a8e308e2f7101ed4326891cc02ab59af4930",
     "protocol": "scintilla.local-control/v1",
     "daemon_url": "http://127.0.0.1:8765",
     "ingress_url": "http://127.0.0.1:8091",
@@ -14,21 +14,21 @@
     {
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
-      "rev": "29272cb1073bb8ba887cbb410d6feff060f850c9",
+      "rev": "dfc885fcb576c96b6b82760ade55a87f48da5417",
       "pull_request": 11,
       "kind": "rust-binary"
     },
     {
       "name": "main-supervisor",
       "repo": "takoda-automation/tkda-main-server.rs",
-      "rev": "5cb682fb4d27932eeeb1dd98cf2f6a7c503df92e",
+      "rev": "8c7453f1483d04425d286024622e2918610ecd1b",
       "kind": "rust-binary",
       "runtime_role": "scintilla-managed-long-lived-worker"
     },
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "774b17d467ab8b1202be062172d25edd856bd048",
+      "rev": "602c7c793143e44c2dd03b9c57ed8a3ccf687eb0",
       "pull_request": 12,
       "kind": "node-worker",
       "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
@@ -49,7 +49,7 @@
     {
       "name": "scintilla-desktop-infra",
       "repo": "scintilla-run/scintilla-desktop-infra",
-      "rev": "4fe14263b2fa11ab7f13f3144701a491083bbce6",
+      "rev": "6226a8e308e2f7101ed4326891cc02ab59af4930",
       "kind": "integration"
     }
   ],
@@ -62,9 +62,9 @@
     "mutable_latest_releases": false
   },
   "promotion_gates": {
-    "scintilla_runtime_matches_current_desktop_infra_contract": false,
+    "scintilla_runtime_matches_current_desktop_infra_contract": true,
     "desktop_daemon_scintilla_adapter_green": false,
-    "desktop_cli_green": false,
+    "desktop_cli_green": true,
     "rust_desktop_app_green": false,
     "flutter_desktop_green": false,
     "playwright_local_smoke_green": false,
