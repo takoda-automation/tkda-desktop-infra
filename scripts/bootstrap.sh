@@ -48,6 +48,7 @@ export TKDA_RUST_WORKER_BIN="$BIN/tkda-rust-worker"
 export TKDA_GO_WORKER_BIN="$BIN/tkda-go-worker"
 export TKDA_LOCAL_CONTROL_TOKEN_FILE="$TOKEN_FILE"
 export SCINTILLA_DESKTOP_INFRA_ROOT="$SRC/scintilla-desktop-infra"
+export TKDA_CLOUDFLARE_TUNNEL_ENABLED=false
 export PATH="$BIN:\$PATH"
 EOF
 
