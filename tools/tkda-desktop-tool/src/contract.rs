@@ -208,9 +208,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
                 .get("revision")
                 .and_then(Value::as_str)
                 .ok_or_else(|| "pinned common desktop layer revision missing".to_owned())?;
-            if !is_sha(revision) || !common_gate {
+            if revision != "7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c" || !is_sha(revision) || !common_gate {
                 return Err(
-                    "pinned common desktop layer must use immutable SHA and green gate".into(),
+                    "pinned common desktop layer must use the audited immutable SHA and green pin gate".into(),
                 );
             }
         }
@@ -222,13 +222,27 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         return Err("native appliance invariants missing".into());
     }
     let native_json: Value = read_json(root.join("appliance.json"))?;
-    if native_json
+    let native_pinned = native_json
         .pointer("/promotion_gates/common_desktop_infra_pinned")
         .and_then(Value::as_bool)
-        == Some(true)
-        && common_status != "pinned"
-    {
-        return Err("native common desktop promotion gate cannot be green while unpinned".into());
+        .ok_or_else(|| "native common desktop pin gate missing".to_owned())?;
+    let native_ci_verified = native_json
+        .pointer("/promotion_gates/common_desktop_infra_ci_verified")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| "native common desktop CI evidence gate missing".to_owned())?;
+    let ores_ci_verified = ores
+        .pointer("/promotion_gates/common_layer_ci_verified")
+        .and_then(Value::as_bool)
+        .ok_or_else(|| "ORES common desktop CI evidence gate missing".to_owned())?;
+
+    if !native_pinned || common_status != "pinned" {
+        return Err("native and ORES common desktop pin gates must both be pinned".into());
+    }
+    if native_ci_verified != ores_ci_verified {
+        return Err("native and ORES common desktop CI evidence gates disagree".into());
+    }
+    if ores.get("channel").and_then(Value::as_str) == Some("stable") && !ores_ci_verified {
+        return Err("stable Takoda channel requires executed common desktop CI evidence".into());
     }
 
     let policy = fs::read_to_string(root.join(".tkda-desktop.toml")).map_err(|e| e.to_string())?;
