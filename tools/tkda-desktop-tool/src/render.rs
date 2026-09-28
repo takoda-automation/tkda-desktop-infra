@@ -16,6 +16,7 @@ pub struct RenderConfig {
     pub python_worker_entry: PathBuf,
     pub rust_worker_bin: PathBuf,
     pub go_worker_bin: PathBuf,
+    pub supervisor_token_file: PathBuf,
     pub agent_id: String,
     pub out: PathBuf,
     pub node_bin: String,
@@ -34,6 +35,7 @@ pub fn config_from_env() -> Result<RenderConfig, String> {
         python_worker_entry: absolute_regular_file("TKDA_PYTHON_WORKER_ENTRY")?,
         rust_worker_bin: absolute_regular_file("TKDA_RUST_WORKER_BIN")?,
         go_worker_bin: absolute_regular_file("TKDA_GO_WORKER_BIN")?,
+        supervisor_token_file: private_secret_file("TKDA_LOCAL_SUPERVISOR_TOKEN_FILE")?,
         agent_id: bounded_identifier_env("TKDA_AGENT_ID", 256)?,
         out: absolute_output_path("TKDA_SCINTILLA_RUNTIME_MANIFEST")?,
         node_bin: bounded_program_env("TKDA_NODE_BIN", "node")?,
@@ -76,6 +78,8 @@ pub fn render_manifest(config: &RenderConfig) -> Result<Value, String> {
                         "TKDA_BIND": "127.0.0.1:18088",
                         "TKDA_EXECUTION_ROLE": "desktop",
                         "TKDA_AGENT_ID": config.agent_id,
+                        "TKDA_REQUIRE_API_AUTH": "true",
+                        "TKDA_API_AUTH_TOKEN_FILE": path_string(&config.supervisor_token_file)?,
                         "TKDA_ALLOW_HEADED": if config.allow_headed { "true" } else { "false" },
                         "TKDA_TYPESCRIPT_WORKER_CMD": config.node_bin,
                         "TKDA_TYPESCRIPT_WORKER_ENTRY": path_string(&config.browser_worker_entry)?,
@@ -177,6 +181,22 @@ fn absolute_regular_file(key: &str) -> Result<PathBuf, String> {
     Ok(path)
 }
 
+fn private_secret_file(key: &str) -> Result<PathBuf, String> {
+    let path = absolute_regular_file(key)?;
+    let metadata = fs::symlink_metadata(&path).map_err(|e| format!("{key}: {e}"))?;
+    if metadata.len() == 0 || metadata.len() > 16 * 1024 {
+        return Err(format!("{key} must contain 1..=16384 bytes"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if metadata.permissions().mode() & 0o077 != 0 {
+            return Err(format!("{key} must not be accessible by group/other users"));
+        }
+    }
+    Ok(path)
+}
+
 fn absolute_directory(key: &str) -> Result<PathBuf, String> {
     let raw = env::var(key).map_err(|_| format!("{key} is required"))?;
     let path = PathBuf::from(raw);
@@ -225,6 +245,7 @@ mod tests {
             python_worker_entry: file("worker.py"),
             rust_worker_bin: file("rust-worker"),
             go_worker_bin: file("go-worker"),
+            supervisor_token_file: file("supervisor-token"),
             agent_id: "contract-test-agent".into(),
             out: root.join("runtime.json"),
             node_bin: "node".into(),
@@ -242,6 +263,11 @@ mod tests {
         assert_eq!(
             supervisor["command"]["env"]["TKDA_SELENIUM_UPSTREAM_URL"],
             "http://127.0.0.1:9515"
+        );
+        assert_eq!(supervisor["command"]["env"]["TKDA_REQUIRE_API_AUTH"], "true");
+        assert_eq!(
+            supervisor["command"]["env"]["TKDA_API_AUTH_TOKEN_FILE"],
+            path_string(&config.supervisor_token_file).unwrap()
         );
         let selenium = workers
             .iter()
