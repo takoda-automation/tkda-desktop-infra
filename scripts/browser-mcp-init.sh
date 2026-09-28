@@ -34,6 +34,7 @@ if [[ ! -f "$BROWSER_ENV" ]]; then
   cat >"$BROWSER_ENV" <<EOF
 export TKDA_BROWSER_MCP_HOSTNAME='browser-mcp.oresoftware.com'
 export TKDA_CLOUDFLARE_TUNNEL='takoda-browser-local'
+export TKDA_K8S_CLUSTER_REVISION='dd958c9d98cdda0b3f31f2d806428c6dc0017a7b'
 export TKDA_BROWSER_MCP_ADAPTER_BIND='127.0.0.1:18090'
 export TKDA_LOCAL_CONTROL_URL='http://127.0.0.1:18087'
 export TKDA_BROWSER_MCP_EXECUTION_MODE='headed'
