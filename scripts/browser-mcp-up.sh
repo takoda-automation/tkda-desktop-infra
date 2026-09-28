@@ -31,13 +31,28 @@ source "$BROWSER_ENV"
 }
 : "${TKDA_BROWSER_MCP_HOSTNAME:?TKDA_BROWSER_MCP_HOSTNAME is required}"
 : "${TKDA_CLOUDFLARE_TUNNEL:?TKDA_CLOUDFLARE_TUNNEL is required}"
+: "${TKDA_K8S_CLUSTER_REVISION:?TKDA_K8S_CLUSTER_REVISION is required}"
+[[ "$TKDA_K8S_CLUSTER_REVISION" =~ ^[0-9a-f]{40}$ ]] || {
+  echo "TKDA_K8S_CLUSTER_REVISION must be an exact lowercase 40-hex commit" >&2
+  exit 1
+}
 
-for tool in node cargo curl cloudflared redis-cli redis-server; do
+for tool in git node cargo curl cloudflared redis-cli redis-server; do
   command -v "$tool" >/dev/null 2>&1 || { echo "missing required tool: $tool" >&2; exit 1; }
 done
 
 mkdir -p "$STATE/logs" "$STATE/run"
 chmod 700 "$STATE/run"
+
+ACTUAL_K8S_REVISION="$(git -C "$K8S_CLUSTER_ROOT" rev-parse HEAD 2>/dev/null || true)"
+[[ "$ACTUAL_K8S_REVISION" == "$TKDA_K8S_CLUSTER_REVISION" ]] || {
+  echo "k8s-cluster checkout must be exactly $TKDA_K8S_CLUSTER_REVISION; got ${ACTUAL_K8S_REVISION:-unavailable}" >&2
+  exit 1
+}
+if [[ -n "$(git -C "$K8S_CLUSTER_ROOT" status --porcelain --untracked-files=all -- remote/deployments/browser-mcp-rs)" ]]; then
+  echo "browser-mcp-rs source under k8s-cluster has local modifications; refusing to launch" >&2
+  exit 1
+fi
 
 node - "$TKDA_SCINTILLA_RUNTIME_MANIFEST" "$TKDA_PLAYWRIGHT_USER_DATA_DIR" "$TKDA_BROWSER_ALLOWED_DOMAINS" <<'NODE'
 import { readFileSync } from 'node:fs';
