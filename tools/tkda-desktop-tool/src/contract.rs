@@ -96,9 +96,7 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         .services
         .get("daemon")
         .ok_or_else(|| "compose daemon service missing".to_owned())?;
-    if daemon.depends_on.as_deref()
-        != Some(&["scintilla".to_owned()])
-    {
+    if daemon.depends_on.as_deref() != Some(&["scintilla".to_owned()]) {
         return Err("Takoda daemon must depend on the Scintilla substrate".into());
     }
     if daemon.runtime != "host"
