@@ -99,23 +99,28 @@ This repository contains the Takoda-specific projection onto the generic Scintil
 
 The candidate appliance pins exact revisions in `appliance.json`. `scripts/bootstrap.sh` materializes those revisions and builds the Takoda daemon, desktop CLI, main supervisor, TypeScript browser worker, and Rust/Go worker adapters.
 
-Render the Scintilla desired-state manifest with absolute paths:
+Render the Scintilla desired-state manifest through the repository's Rust tooling. All referenced files must be absolute, existing, regular non-symlink files:
 
 ```sh
-python3 scripts/render_scintilla_runtime.py \
-  --scintilla-ingress-bin /opt/scintilla/ingress/bin/scintilla_ingress \
-  --scintilla-ingress-root /opt/scintilla/ingress \
-  --tkda-main-server-bin "$PWD/.desktop/bin/tkda-main-server" \
-  --browser-worker-entry "$PWD/.desktop/src/browser-workers/dist/worker.js" \
-  --selenium-node-entry "$PWD/.desktop/src/browser-workers/dist/selenium-node.js" \
-  --chromedriver-bin /absolute/path/to/chromedriver \
-  --python-worker-entry "$PWD/.desktop/src/main-supervisor/workers/python/tkda_worker.py" \
-  --rust-worker-bin "$PWD/.desktop/bin/tkda-rust-worker" \
-  --go-worker-bin "$PWD/.desktop/bin/tkda-go-worker" \
-  --agent-id my-laptop \
-  --allow-headed \
-  --out "$PWD/.desktop/runtime.scintilla.json"
+export SCINTILLA_INGRESS_BIN=/opt/scintilla/ingress/bin/scintilla_ingress
+export SCINTILLA_INGRESS_ROOT=/opt/scintilla/ingress
+export TKDA_MAIN_SERVER_BIN="$PWD/.desktop/bin/tkda-main-server"
+export TKDA_BROWSER_WORKER_ENTRY="$PWD/.desktop/src/browser-workers/dist/worker.js"
+export TKDA_SELENIUM_NODE_ENTRY="$PWD/.desktop/src/browser-workers/dist/selenium-node.js"
+export TKDA_CHROMEDRIVER_BIN=/absolute/path/to/chromedriver
+export TKDA_PYTHON_WORKER_ENTRY="$PWD/.desktop/src/main-supervisor/workers/python/tkda_worker.py"
+export TKDA_RUST_WORKER_BIN="$PWD/.desktop/bin/tkda-rust-worker"
+export TKDA_GO_WORKER_BIN="$PWD/.desktop/bin/tkda-go-worker"
+export TKDA_AGENT_ID=my-laptop
+export TKDA_ALLOW_HEADED=true
+export TKDA_SCINTILLA_RUNTIME_MANIFEST="$PWD/.desktop/runtime.scintilla.json"
+
+cargo run --quiet --release \
+  --manifest-path tools/tkda-desktop-tool/Cargo.toml \
+  --bin tkda-desktop-render
 ```
+
+The renderer rejects unsafe agent identifiers, symlinked execution files, non-absolute execution paths, and arbitrary Node/Python command paths.
 
 Then place the required cloud-agent values and manifest path in `.desktop/env`:
 
@@ -141,7 +146,7 @@ The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda d
 
 `tkda-browser-workers.ts` is the TypeScript browser runtime and supports Playwright, Puppeteer, and Selenium. `tkda-main-server.rs` launches it with the requested `TKDA_BROWSER_ENGINE`. For Selenium, Scintilla separately owns the long-running `dist/selenium-node.js` wrapper, which launches raw ChromeDriver on loopback; the per-run worker connects through `TKDA_SELENIUM_UPSTREAM_URL=http://127.0.0.1:9515`. Non-TypeScript adapters remain separate worker languages and can use their native Selenium path or a bounded browser sidecar as the contracts evolve.
 
-The candidate channel intentionally pins unmerged desktop-control commits while this implementation wave is under review. Do not promote those pins to a stable appliance until the referenced PR CI is green.
+The candidate channel intentionally pins in-review desktop-control commits while this implementation wave is under review. Promotion remains fail-closed until the referenced component CI and local browser E2E gates are green on the exact pinned revisions.
 
 ## ORES Compose local daemon lifecycle
 

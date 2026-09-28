@@ -15,78 +15,13 @@ concurrency:
 jobs:
   validate:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-
+        with:
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
+        with:
+          toolchain: 1.88.0
       - name: Validate Takoda desktop orchestration projection
-        shell: bash
-        run: |
-          ruby <<'RUBY'
-          require "yaml"
-          require "json"
-
-          compose = YAML.safe_load(File.read(".ores-compose.yaml"), permitted_classes: [], permitted_symbols: [], aliases: false)
-          native = JSON.parse(File.read("appliance.json"))
-          ores = JSON.parse(File.read("ores-desktop-appliance.json"))
-
-          abort "native appliance schema drifted" unless native["schema"] == "tkda.desktop-appliance/v1"
-          abort "ORES appliance schema drifted" unless ores["schema"] == "ores.desktop-appliance/v1"
-
-          common = ores.fetch("common_layer")
-          abort "common desktop repo identity drifted" unless common["repository"] == "ORESoftware/ores-common-desktop-infra"
-          abort "common desktop checkout must stay under tmp/dev" unless common["checkout_dir"] == "tmp/dev/ores-common-desktop-infra"
-          required_common_caps = %w[consumer-validation loopback-policy secret-file-policy cloudflare-policy update-policy process-lifecycle health-readiness structured-logging]
-          capabilities = common.fetch("capabilities")
-          abort "common desktop capability set incomplete" unless (required_common_caps - capabilities).empty?
-
-          gates = ores.fetch("promotion_gates", {})
-          case common["status"]
-          when "awaiting-repository"
-            abort "awaiting common repository must not have a revision" unless common["revision"].nil?
-            abort "common layer promotion gate must remain false" unless gates["common_layer_pinned"] == false
-            abort "stable channel cannot await common repository" if ores["channel"] == "stable"
-          when "pinned"
-            revision = common["revision"].to_s
-            abort "pinned common layer requires immutable 40-hex revision" unless revision.match?(/\A[0-9a-f]{40}\z/)
-            abort "pinned common layer promotion gate must be true" unless gates["common_layer_pinned"] == true
-          else
-            abort "unknown common desktop layer status"
-          end
-          abort "ORES Compose project schema drifted" unless compose["schema_version"] == "ores.compose.v1"
-
-          source = compose.fetch("source")
-          abort "source must be credential-free GitHub HTTPS" unless source.fetch("repository") == "https://github.com/takoda-automation/tkda-desktop-daemon.git"
-          abort "source commit must be immutable 40-hex" unless source.fetch("commit").match?(/\A[0-9a-f]{40}\z/)
-          abort "checkout must stay under tmp/dev" unless source.fetch("checkout_dir").start_with?("tmp/dev/")
-
-          component = native.fetch("components").find { |item| item["name"] == "desktop-daemon" }
-          abort "native appliance missing desktop-daemon component" unless component
-          abort "native/source repo mismatch" unless component["repo"] == "takoda-automation/tkda-desktop-daemon"
-          abort "native/source revision mismatch" unless component["rev"] == source["commit"]
-
-          daemon = compose.fetch("services").fetch("daemon")
-          abort "daemon must run on host" unless daemon["runtime"] == "host"
-          abort "daemon must build before start" unless daemon["build"] == [["cargo", "build", "--release"]]
-          abort "daemon must execute the release binary directly" unless daemon["command"] == ["./target/release/tkda-desktop-daemon"]
-
-          required = %w[TKDA_AGENT_URL TKDA_AGENT_ID TKDA_AGENT_TOKEN_FILE TKDA_LOCAL_CONTROL_TOKEN_FILE]
-          inherited = daemon.fetch("inherit_env", [])
-          abort "required agent identity/credential file inputs missing" unless (required - inherited).empty?
-          env = daemon.fetch("environment")
-          abort "control API must be loopback" unless env["TKDA_LOCAL_CONTROL_BIND"] == "127.0.0.1:18087"
-          abort "supervisor target must be loopback" unless env["TKDA_LOCAL_SUPERVISOR_BIND"] == "127.0.0.1:18088"
-          abort "Scintilla must own long-lived supervisor lifecycle" unless env["TKDA_LAUNCH_SUPERVISOR"] == "false"
-
-          abort "native appliance must deny arbitrary remote shell" unless native.dig("invariants", "arbitrary_remote_shell") == false
-          abort "native appliance must keep browser control loopback-only" unless native.dig("invariants", "browser_control_ports_loopback_only") == true
-          abort "native Takoda promotion must also wait for common desktop infra" unless native.dig("promotion_gates", "common_desktop_infra_pinned") == false || common["status"] == "pinned"
-
-          abort "ORES projection must not require a public IP" unless ores.dig("host", "requires_public_ip") == false
-          abort "Takoda must remain outbound-agent-only" unless ores.dig("cloudflare", "mode") == "not-required"
-          abort "Takoda must not be public-ready" unless ores.dig("cloudflare", "public_ingress_ready") == false
-          abort "Takoda origin auth mode drifted" unless ores.dig("cloudflare", "origin_auth") == "outbound-agent-only"
-          abort "Takoda may not declare a public compose profile" unless ores.dig("orchestrator", "public_config").nil?
-          abort "unexpected public compose profile" if File.exist?(".ores-compose.public.yaml")
-          abort "daemon lockfile gate must remain explicit" unless ores.dig("promotion_gates", "daemon_lockfile_committed") == false
-          RUBY
+        run: cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml contract::tests::repository_contract_is_consistent -- --exact
