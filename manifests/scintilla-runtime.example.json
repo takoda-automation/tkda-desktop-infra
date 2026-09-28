@@ -23,7 +23,7 @@
   },
   "workers": [
     {
-      "id": "tkda-local-supervisor",
+      "id": "takoda-main-supervisor",
       "runtime": "rust",
       "mode": "host",
       "command": {
