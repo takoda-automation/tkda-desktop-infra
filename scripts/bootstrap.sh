@@ -23,7 +23,7 @@ cargo build --release --manifest-path "$SRC/main-supervisor/workers/rust/Cargo.t
 )
 (
   cd "$SRC/browser-workers"
-  npm ci
+  npm install --ignore-scripts
   npm run build
 )
 cargo build --release --manifest-path "$SRC/desktop-cli/Cargo.toml"
