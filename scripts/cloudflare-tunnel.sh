@@ -17,6 +17,23 @@ PID_FILE="$STATE/cloudflared.pid"
 LOG_FILE="$STATE/logs/cloudflared.log"
 METRICS_ADDR="${TKDA_CLOUDFLARE_METRICS_ADDR:-127.0.0.1:20241}"
 
+validate_metrics_addr() {
+  local port
+  if [[ "$METRICS_ADDR" =~ ^127\.0\.0\.1:([0-9]{1,5})$ ]]; then
+    port="${BASH_REMATCH[1]}"
+  elif [[ "$METRICS_ADDR" =~ ^\[::1\]:([0-9]{1,5})$ ]]; then
+    port="${BASH_REMATCH[1]}"
+  else
+    echo "TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port using literal 127.0.0.1 or [::1]" >&2
+    exit 1
+  fi
+
+  if (( 10#$port < 1 || 10#$port > 65535 )); then
+    echo "TKDA_CLOUDFLARE_METRICS_ADDR port must be between 1 and 65535" >&2
+    exit 1
+  fi
+}
+
 is_running() {
   [[ -f "$PID_FILE" ]] || return 1
   local pid
@@ -33,11 +50,23 @@ require_token_file() {
     echo "tunnel token file must be an existing regular non-symlink file: $TOKEN_FILE" >&2
     exit 1
   }
-  if [[ "$(wc -c < "$TOKEN_FILE" | tr -d ' ')" -gt 16384 ]]; then
-    echo "tunnel token file is unexpectedly large" >&2
+  local size
+  size="$(wc -c < "$TOKEN_FILE" | tr -d ' ')"
+  if [[ "$size" -lt 32 || "$size" -gt 16384 ]]; then
+    echo "tunnel token file has an invalid size" >&2
     exit 1
   fi
+  if [[ "$(uname -s)" != "MINGW"* && "$(uname -s)" != "MSYS"* && "$(uname -s)" != "CYGWIN"* ]]; then
+    local mode
+    mode="$(stat -c '%a' "$TOKEN_FILE" 2>/dev/null || stat -f '%Lp' "$TOKEN_FILE" 2>/dev/null || true)"
+    if [[ -z "$mode" || $((8#$mode & 077)) -ne 0 ]]; then
+      echo "tunnel token file must not be readable or writable by group/other users" >&2
+      exit 1
+    fi
+  fi
 }
+
+validate_metrics_addr
 
 case "$ACTION" in
   start)
@@ -55,7 +84,13 @@ case "$ACTION" in
     fi
 
     rm -f "$PID_FILE"
-    nohup "$CLOUDFLARED_BIN" tunnel       --no-autoupdate       --metrics "$METRICS_ADDR"       --loglevel info       run       --token-file "$TOKEN_FILE"       >>"$LOG_FILE" 2>&1 &
+    nohup "$CLOUDFLARED_BIN" tunnel \
+      --no-autoupdate \
+      --metrics "$METRICS_ADDR" \
+      --loglevel info \
+      run \
+      --token-file "$TOKEN_FILE" \
+      >>"$LOG_FILE" 2>&1 &
     echo $! >"$PID_FILE"
 
     for _ in {1..80}; do
