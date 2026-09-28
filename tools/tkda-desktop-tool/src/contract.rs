@@ -326,6 +326,56 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         }
     }
 
+    if root.join("docs/browser-mcp-cloudflare.md").exists() {
+        let cloudflare = fs::read_to_string(root.join("scripts/browser-mcp-cloudflare-init.sh"))
+            .map_err(|e| e.to_string())?;
+        if cloudflare.contains("tunnel route dns") && cloudflare.contains("|| true") {
+            return Err("browser MCP Cloudflare DNS setup may not fail open".into());
+        }
+
+        for script in [
+            "scripts/browser-mcp-up.sh",
+            "scripts/browser-mcp-down.sh",
+            "scripts/browser-mcp-status.sh",
+        ] {
+            let source = fs::read_to_string(root.join(script)).map_err(|e| e.to_string())?;
+            if !source.contains("ps -p") {
+                return Err(format!(
+                    "{script} must validate PID ownership before process control"
+                ));
+            }
+        }
+
+        let up = fs::read_to_string(root.join("scripts/browser-mcp-up.sh"))
+            .map_err(|e| e.to_string())?;
+        if !up.contains("TKDA_K8S_CLUSTER_REVISION")
+            || !up.contains("rev-parse HEAD")
+            || !up.contains(
+                "status --porcelain --untracked-files=all -- remote/deployments/browser-mcp-rs",
+            )
+        {
+            return Err("browser MCP gateway source must be pinned and clean before launch".into());
+        }
+
+        let adapter = fs::read_to_string(root.join("tools/tkda-browser-mcp-adapter/adapter.mjs"))
+            .map_err(|e| e.to_string())?;
+        for required in [
+            "serverAllowedDomains",
+            "requestedDomainCeiling",
+            "workflow domain",
+            "TKDA_BROWSER_MCP_ALLOWED_DOMAINS",
+            "readSecretFile",
+            "permissions are too broad; expected mode 0600",
+            "must reference a regular non-symlink file",
+        ] {
+            if !adapter.contains(required) {
+                return Err(format!(
+                    "browser MCP adapter missing domain-ceiling guard: {required}"
+                ));
+            }
+        }
+    }
+
     Ok(())
 }
 
