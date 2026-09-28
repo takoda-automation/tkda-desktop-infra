@@ -140,6 +140,8 @@ Start and inspect the full local stack:
 .desktop/bin/tkda-desktop-cli --command=doctor
 ```
 
+Optional direct remote browser dispatch is enabled with a remotely managed Cloudflare Tunnel token file and `TKDA_CLOUDFLARE_AUTO_START=true`. The tunnel is deliberately outside ORES Compose lifecycle. Use `bash ./scripts/cloudflare-tunnel.sh {start|stop|status|restart}` for explicit control.
+
 The expected local ports are Scintilla ingress on `127.0.0.1:8091`, the Takoda desktop supervisor on `127.0.0.1:18088`, raw ChromeDriver on `127.0.0.1:9515`, and the authenticated Takoda desktop daemon on `127.0.0.1:18087`. Per-run browser workers communicate through stdio; the ChromeDriver port is loopback-only and must never be published through Cloudflare Tunnel.
 
 ### Browser engines
@@ -160,7 +162,7 @@ ores-compose up .ores-compose.yaml
 
 The compose manifest pins the same `tkda-desktop-daemon` revision as native `appliance.json`, requires agent/local-control token **file paths**, binds only to loopback, and sets `TKDA_LAUNCH_SUPERVISOR=false` so Scintilla remains the long-lived process owner.
 
-Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. See [docs/local-deployment.md](docs/local-deployment.md) and [ores-desktop-appliance.json](ores-desktop-appliance.json).
+Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. For trusted clients that need direct browser-run dispatch, the repository now also supports a separately managed Cloudflare Access + Tunnel path that publishes only the authenticated daemon on `127.0.0.1:18087`; browser-control ports remain private. See [docs/cloudflare-browser-ingress.md](docs/cloudflare-browser-ingress.md), [docs/local-deployment.md](docs/local-deployment.md), and [ores-desktop-appliance.json](ores-desktop-appliance.json).
 
 ## Shared desktop infra dependency
 

@@ -59,3 +59,7 @@ done
 
 curl --fail --silent -H "Authorization: Bearer $TOKEN"   http://127.0.0.1:18087/v1/status
 echo
+
+if [[ "${TKDA_CLOUDFLARE_AUTO_START:-false}" == "true" ]]; then
+  bash "$ROOT/scripts/cloudflare-tunnel.sh" start
+fi

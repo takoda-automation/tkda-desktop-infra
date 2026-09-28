@@ -26,9 +26,11 @@ The compose source pin must equal the native appliance's `desktop-daemon` compon
 
 No public/static/dedicated IP is required. The desktop daemon maintains an outbound authenticated WebSocket to the hosted control plane.
 
-There is intentionally no `.ores-compose.public.yaml` and no inbound Cloudflare Tunnel for Takoda's normal agent path. Browser-control ports remain loopback-only.
+There is intentionally no `.ores-compose.public.yaml` and no inbound Cloudflare Tunnel for Takoda's **normal agent path**. Browser-control ports remain loopback-only.
 
-Agent and local-control bearer values are read from protected files. The compose contract inherits only the **file paths**, never bearer values embedded in argv.
+An optional, separately managed Cloudflare ingress may publish only the authenticated desktop-daemon origin on `127.0.0.1:18087` for trusted external browser-automation clients. It is not part of ORES Compose lifecycle and must be protected by Cloudflare Access plus the daemon's own bearer-token authentication. See [cloudflare-browser-ingress.md](cloudflare-browser-ingress.md).
+
+Agent and local-control bearer values are read from protected files. The compose contract inherits only the **file paths**, never bearer values embedded in argv. Optional Cloudflare Tunnel credentials follow the same rule: `scripts/cloudflare-tunnel.sh` consumes `TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE` and does not place the token value on argv.
 
 ## Promotion gate
 
