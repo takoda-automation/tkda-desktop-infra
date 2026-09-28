@@ -59,7 +59,8 @@
     "takoda_supervisor_owns_per_run_worker_protocol": true,
     "browser_control_ports_loopback_only": true,
     "arbitrary_remote_shell": false,
-    "mutable_latest_releases": false
+    "mutable_latest_releases": false,
+    "app_layer_url_filter_is_not_network_isolation": true
   },
   "promotion_gates": {
     "scintilla_runtime_matches_current_desktop_infra_contract": true,
@@ -70,6 +71,7 @@
     "playwright_local_smoke_green": false,
     "puppeteer_local_smoke_green": false,
     "selenium_local_smoke_green": false,
-    "common_desktop_infra_pinned": false
+    "common_desktop_infra_pinned": false,
+    "desktop_browser_network_isolation_green": false
   }
 }

@@ -168,3 +168,12 @@ Generic desktop lifecycle/security behavior is moving to `ORESoftware/ores-commo
 
 Current state is intentionally `awaiting-repository` with a null revision because GitHub does not yet expose that repository through the connected installation. Product-local behavior remains candidate-only until the common layer can be consumed by exact SHA.
 
+
+
+### Desktop browser network isolation gate
+
+Application-layer URL validation in the Playwright/Puppeteer worker is defense in depth, **not** a complete SSRF boundary. DNS can change between validation and the browser's actual connection, and Selenium cannot reliably intercept every subresource request.
+
+Cloud workers are protected by the Kubernetes egress NetworkPolicy in `tkda-infra`. Desktop promotion therefore has a separate `desktop_browser_network_isolation_green` gate. Keep it false until the Scintilla/desktop substrate proves an OS/runtime-level egress boundary that blocks loopback, link-local, private RFC1918/ULA, metadata, and other special-use destinations for browser child processes while preserving public web access.
+
+Do not mark three-browser desktop E2E as production-safe based only on JavaScript hostname/DNS checks.
