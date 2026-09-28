@@ -80,7 +80,7 @@ export PORT=8092
 export BROWSER_MCP_WORKER_URL=http://127.0.0.1:18090
 export BROWSER_MCP_ALLOWED_DOMAINS="$TKDA_BROWSER_MCP_ALLOWED_DOMAINS"
 export BROWSER_MCP_REQUIRE_AUTH=true
-export BROWSER_MCP_PUBLIC_BASE_URLS="https://$TKDA_BROWSER_MCP_HOSTNAME/mcp"
+export BROWSER_MCP_PUBLIC_BASE_URLS="https://$TKDA_BROWSER_MCP_HOSTNAME"
 export BROWSER_MCP_OAUTH_REDIS_URL="${BROWSER_MCP_OAUTH_REDIS_URL:-redis://127.0.0.1:6379/4}"
 export BROWSER_MCP_OAUTH_SIGNING_SECRET="$(tr -d '\r\n' <"$BROWSER_MCP_OAUTH_SIGNING_SECRET_FILE")"
 export BROWSER_MCP_OAUTH_OPERATOR_SECRET="$(tr -d '\r\n' <"$BROWSER_MCP_OAUTH_OPERATOR_SECRET_FILE")"
@@ -101,4 +101,4 @@ echo $! >"$STATE/run/cloudflared.pid"
 echo "Takoda browser MCP lane started"
 echo "local adapter:  http://127.0.0.1:18090/agent/healthz"
 echo "local MCP:      http://127.0.0.1:8092/mcp"
-echo "public MCP:     https://$TKDA_BROWSER_MCP_HOSTNAME/mcp"
+echo "public MCP:     https://$TKDA_BROWSER_MCP_HOSTNAME"
