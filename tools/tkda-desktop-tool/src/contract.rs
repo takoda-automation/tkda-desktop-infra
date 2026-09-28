@@ -343,6 +343,9 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             "requestedDomainCeiling",
             "workflow domain",
             "TKDA_BROWSER_MCP_ALLOWED_DOMAINS",
+            "readSecretFile",
+            "permissions are too broad; expected mode 0600",
+            "must reference a regular non-symlink file",
         ] {
             if !adapter.contains(required) {
                 return Err(format!(
