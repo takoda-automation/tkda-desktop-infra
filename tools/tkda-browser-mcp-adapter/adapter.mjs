@@ -14,6 +14,39 @@ function env(name, fallback = '') {
   return value && value.trim() ? value.trim() : fallback;
 }
 
+function normalizeDomainToken(value, label) {
+  const domain = String(value ?? '').trim().toLowerCase().replace(/\.$/, '');
+  if (
+    !domain
+    || domain.length > 253
+    || !domain.includes('.')
+    || domain.includes('..')
+    || !/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(domain)
+    || ['localhost', 'local'].includes(domain)
+  ) {
+    throw Object.assign(new Error(`${label} contains an invalid hostname`), {
+      status: 403,
+      code: 'domain_not_allowed',
+    });
+  }
+  return domain;
+}
+
+function parseDomainList(raw, label) {
+  const values = String(raw ?? '')
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .map((value) => normalizeDomainToken(value, label));
+  const unique = [...new Set(values)];
+  if (!unique.length) throw new Error(`${label} must contain at least one hostname`);
+  return unique;
+}
+
+function domainWithin(domain, ceiling) {
+  return domain === ceiling || domain.endsWith(`.${ceiling}`);
+}
+
 function readSecret(valueName, fileName) {
   const direct = env(valueName);
   if (direct) return direct;
@@ -52,6 +85,10 @@ const workerSecret = readSecret('TKDA_BROWSER_MCP_WORKER_SECRET', 'TKDA_BROWSER_
 const executionMode = env('TKDA_BROWSER_MCP_EXECUTION_MODE', 'headless');
 if (!['headed', 'headless'].includes(executionMode)) throw new Error('TKDA_BROWSER_MCP_EXECUTION_MODE must be headed or headless');
 if (localControlToken.length < 32 || workerSecret.length < 32) throw new Error('browser MCP secrets must be at least 32 characters');
+const serverAllowedDomains = parseDomainList(
+  env('TKDA_BROWSER_MCP_ALLOWED_DOMAINS'),
+  'TKDA_BROWSER_MCP_ALLOWED_DOMAINS',
+);
 
 const sessions = new Map();
 const SESSION_IDLE_MS = 30 * 60 * 1000;
@@ -185,14 +222,37 @@ async function driver(runId, action, timeoutMs = DEFAULT_TIMEOUT_MS) {
   return response.body ?? {};
 }
 
+function requestedDomainCeiling(allowedDomains) {
+  if (!Array.isArray(allowedDomains) || !allowedDomains.length) {
+    throw Object.assign(new Error('workflow allowed_domains is required'), {
+      status: 403,
+      code: 'domain_not_allowed',
+    });
+  }
+  const requested = [...new Set(
+    allowedDomains.map((domain) => normalizeDomainToken(domain, 'workflow allowed_domains')),
+  )];
+  for (const domain of requested) {
+    if (!serverAllowedDomains.some((ceiling) => domainWithin(domain, ceiling))) {
+      throw Object.assign(
+        new Error(`workflow domain ${domain} exceeds the local server domain ceiling`),
+        { status: 403, code: 'domain_not_allowed' },
+      );
+    }
+  }
+  return requested;
+}
+
 function domainAllowed(raw, allowedDomains) {
-  if (!allowedDomains?.length) return false;
+  const requested = requestedDomainCeiling(allowedDomains);
   let host;
-  try { host = new URL(raw).hostname.toLowerCase(); } catch { return false; }
-  return allowedDomains.some((domain) => {
-    const d = String(domain).trim().toLowerCase();
-    return d && (host === d || host.endsWith(`.${d}`));
-  });
+  try {
+    host = normalizeDomainToken(new URL(raw).hostname, 'browser destination');
+  } catch {
+    return false;
+  }
+  return requested.some((domain) => domainWithin(host, domain))
+    && serverAllowedDomains.some((domain) => domainWithin(host, domain));
 }
 
 function blockerFromSnapshot(snapshot) {
