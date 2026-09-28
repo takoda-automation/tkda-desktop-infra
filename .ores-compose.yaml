@@ -3,7 +3,7 @@ project: takoda-desktop
 allow_lazy_start: false
 source:
   repository: https://github.com/takoda-automation/tkda-desktop-daemon.git
-  commit: 29272cb1073bb8ba887cbb410d6feff060f850c9
+  commit: dfc885fcb576c96b6b82760ade55a87f48da5417
   checkout_dir: tmp/dev/tkda-desktop-daemon
 services:
   daemon:
