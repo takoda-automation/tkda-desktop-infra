@@ -42,7 +42,8 @@ export TKDA_BROWSER_MCP_WORKER_SECRET_FILE='$WORKER_SECRET_FILE'
 export BROWSER_MCP_OAUTH_SIGNING_SECRET_FILE='$SIGNING_SECRET_FILE'
 export BROWSER_MCP_OAUTH_OPERATOR_SECRET_FILE='$OPERATOR_SECRET_FILE'
 export BROWSER_MCP_OAUTH_REDIS_URL='redis://127.0.0.1:6379/4'
-export TKDA_BROWSER_MCP_ALLOWED_DOMAINS='news.ycombinator.com,greenhouse.io,boards.greenhouse.io,job-boards.greenhouse.io,ashbyhq.com,jobs.ashbyhq.com,lever.co,jobs.lever.co,workday.com,myworkdayjobs.com,smartrecruiters.com,icims.com,jobvite.com,workable.com,bamboohr.com,recruitee.com,applytojob.com,ats.rippling.com,breezy.hr,jobscore.com'
+export TKDA_BROWSER_MCP_ALLOWED_DOMAINS='news.ycombinator.com,greenhouse.io,boards.greenhouse.io,job-boards.greenhouse.io,ashbyhq.com,jobs.ashbyhq.com,lever.co,jobs.lever.co,workday.com,myworkdayjobs.com,smartrecruiters.com,icims.com,jobvite.com,workable.com,bamboohr.com,recruitee.com,applytojob.com,ats.rippling.com,breezy.hr,jobscore.com,linkedin.com,licdn.com,indeed.com,indeedassets.com,glassdoor.com,wellfound.com,angel.co'
+export TKDA_BROWSER_ALLOWED_DOMAINS='news.ycombinator.com,greenhouse.io,boards.greenhouse.io,job-boards.greenhouse.io,ashbyhq.com,jobs.ashbyhq.com,lever.co,jobs.lever.co,workday.com,myworkdayjobs.com,smartrecruiters.com,icims.com,jobvite.com,workable.com,bamboohr.com,recruitee.com,applytojob.com,ats.rippling.com,breezy.hr,jobscore.com,linkedin.com,licdn.com,indeed.com,indeedassets.com,glassdoor.com,wellfound.com,angel.co'
 EOF
   chmod 600 "$BROWSER_ENV"
 fi
