@@ -179,7 +179,10 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         "health-readiness",
         "structured-logging",
     ] {
-        if !capabilities.iter().any(|value| value.as_str() == Some(required)) {
+        if !capabilities
+            .iter()
+            .any(|value| value.as_str() == Some(required))
+        {
             return Err(format!("common desktop capability missing: {required}"));
         }
     }
@@ -206,16 +209,15 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
                 .and_then(Value::as_str)
                 .ok_or_else(|| "pinned common desktop layer revision missing".to_owned())?;
             if !is_sha(revision) || !common_gate {
-                return Err("pinned common desktop layer must use immutable SHA and green gate".into());
+                return Err(
+                    "pinned common desktop layer must use immutable SHA and green gate".into(),
+                );
             }
         }
         _ => return Err("unknown common desktop layer status".into()),
     }
 
-    let native_common_gate = appliance
-        .invariants
-        .get("arbitrary_remote_shell")
-        .is_some();
+    let native_common_gate = appliance.invariants.get("arbitrary_remote_shell").is_some();
     if !native_common_gate {
         return Err("native appliance invariants missing".into());
     }
