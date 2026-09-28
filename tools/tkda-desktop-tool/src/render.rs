@@ -266,6 +266,17 @@ mod tests {
     }
 
     #[test]
+    fn checked_in_example_matches_supervisor_identity() {
+        let example: Value = serde_json::from_str(include_str!(
+            "../../../manifests/scintilla-runtime.example.json"
+        ))
+        .unwrap();
+        let workers = example["workers"].as_array().unwrap();
+        assert!(workers.iter().any(|worker| worker["id"] == "takoda-main-supervisor"));
+        assert!(!workers.iter().any(|worker| worker["id"] == "tkda-local-supervisor"));
+    }
+
+    #[test]
     fn identifiers_fail_closed() {
         assert!(validate_agent_id("../agent").is_err());
         assert!(validate_agent_id("agent-1").is_ok());
