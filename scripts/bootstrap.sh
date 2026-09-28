@@ -35,7 +35,9 @@ cp "$SRC/desktop-cli/target/release/tkda-desktop-cli" "$BIN/"
 chmod 0755 "$BIN/"*
 
 TOKEN_FILE="$CONFIG/local-control.token"
+SUPERVISOR_TOKEN_FILE="$CONFIG/local-supervisor.token"
 TKDA_TOKEN_FILE="$TOKEN_FILE" cargo run --quiet --release --manifest-path "$TOOL_MANIFEST" --bin tkda-desktop-token
+TKDA_TOKEN_FILE="$SUPERVISOR_TOKEN_FILE" cargo run --quiet --release --manifest-path "$TOOL_MANIFEST" --bin tkda-desktop-token
 
 cat >"$STATE/env" <<EOF
 export TKDA_DESKTOP_DAEMON_BIN="$BIN/tkda-desktop-daemon"
@@ -47,6 +49,7 @@ export TKDA_PYTHON_WORKER_ENTRY="$SRC/main-supervisor/workers/python/tkda_worker
 export TKDA_RUST_WORKER_BIN="$BIN/tkda-rust-worker"
 export TKDA_GO_WORKER_BIN="$BIN/tkda-go-worker"
 export TKDA_LOCAL_CONTROL_TOKEN_FILE="$TOKEN_FILE"
+export TKDA_LOCAL_SUPERVISOR_TOKEN_FILE="$SUPERVISOR_TOKEN_FILE"
 export SCINTILLA_DESKTOP_INFRA_ROOT="$SRC/scintilla-desktop-infra"
 export PATH="$BIN:\$PATH"
 EOF
