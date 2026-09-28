@@ -41,7 +41,9 @@ pub fn config_from_env() -> Result<RenderConfig, String> {
         node_bin: bounded_program_env("TKDA_NODE_BIN", "node")?,
         python_bin: bounded_program_env("TKDA_PYTHON_BIN", "python3")?,
         allow_headed: env::var("TKDA_ALLOW_HEADED").as_deref() == Ok("true"),
-        playwright_user_data_dir: optional_absolute_directory_path("TKDA_PLAYWRIGHT_USER_DATA_DIR")?,
+        playwright_user_data_dir: optional_absolute_directory_path(
+            "TKDA_PLAYWRIGHT_USER_DATA_DIR",
+        )?,
         browser_allowed_domains: browser_domain_list_env("TKDA_BROWSER_ALLOWED_DOMAINS")?,
     })
 }
@@ -205,7 +207,11 @@ fn absolute_directory(key: &str) -> Result<PathBuf, String> {
 
 fn browser_domain_list_env(key: &str) -> Result<String, String> {
     let raw = env::var(key).unwrap_or_default();
-    for domain in raw.split(',').map(str::trim).filter(|value| !value.is_empty()) {
+    for domain in raw
+        .split(',')
+        .map(str::trim)
+        .filter(|value| !value.is_empty())
+    {
         if !domain.contains('.')
             || domain.starts_with('.')
             || domain.ends_with('.')
@@ -301,8 +307,14 @@ mod tests {
             .find(|v| v["id"] == "takoda-main-supervisor")
             .unwrap();
         assert_eq!(supervisor["command"]["env"]["TKDA_BIND"], "127.0.0.1:18088");
-        assert_eq!(supervisor["command"]["env"]["TKDA_PLAYWRIGHT_USER_DATA_DIR"], root.join("playwright-profile").to_str().unwrap());
-        assert_eq!(supervisor["command"]["env"]["TKDA_BROWSER_ALLOWED_DOMAINS"], "example.com,example.org");
+        assert_eq!(
+            supervisor["command"]["env"]["TKDA_PLAYWRIGHT_USER_DATA_DIR"],
+            root.join("playwright-profile").to_str().unwrap()
+        );
+        assert_eq!(
+            supervisor["command"]["env"]["TKDA_BROWSER_ALLOWED_DOMAINS"],
+            "example.com,example.org"
+        );
         assert_eq!(
             supervisor["command"]["env"]["TKDA_SELENIUM_UPSTREAM_URL"],
             "http://127.0.0.1:9515"
