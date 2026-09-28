@@ -105,8 +105,7 @@
           "minLength": 1
         },
         "target": {
-          "type": "string",
-          "pattern": "^http://(127\\.0\\.0\\.1|localhost|\\[::1\\]):[0-9]+$"
+          "const": "http://127.0.0.1:18087"
         },
         "mode": {
           "enum": [
@@ -142,6 +141,37 @@
         "mode",
         "target",
         "access"
+      ],
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "enabled": {
+                "const": true
+              }
+            },
+            "required": [
+              "enabled"
+            ]
+          },
+          "then": {
+            "required": [
+              "hostname",
+              "token_file"
+            ],
+            "properties": {
+              "hostname": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "^[A-Za-z0-9.-]+$"
+              },
+              "token_file": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        }
       ]
     },
     "preferences": {
