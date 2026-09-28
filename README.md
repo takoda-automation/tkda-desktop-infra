@@ -156,3 +156,10 @@ ores-compose up .ores-compose.yaml
 The compose manifest pins the same `tkda-desktop-daemon` revision as native `appliance.json`, requires agent/local-control token **file paths**, binds only to loopback, and sets `TKDA_LAUNCH_SUPERVISOR=false` so Scintilla remains the long-lived process owner.
 
 Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-agent path. See [docs/local-deployment.md](docs/local-deployment.md) and [ores-desktop-appliance.json](ores-desktop-appliance.json).
+
+## Shared desktop infra dependency
+
+Generic desktop lifecycle/security behavior is moving to `ORESoftware/ores-common-desktop-infra`. This repo declares that dependency in its ORES appliance metadata and blocks stable promotion until an exact common-layer commit is pinned.
+
+Current state is intentionally `awaiting-repository` with a null revision because GitHub does not yet expose that repository through the connected installation. Product-local behavior remains candidate-only until the common layer can be consumed by exact SHA.
+
