@@ -292,7 +292,8 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     let tunnel_helper =
         fs::read_to_string(root.join("scripts/cloudflare-tunnel.sh")).map_err(|e| e.to_string())?;
     if !tunnel_helper.contains("TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port")
-        || !tunnel_helper.contains("tunnel token file must not be readable or writable by group/other users")
+        || !tunnel_helper
+            .contains("tunnel token file must not be readable or writable by group/other users")
     {
         return Err("Cloudflare local helper hardening drifted".into());
     }
