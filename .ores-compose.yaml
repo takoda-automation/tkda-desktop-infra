@@ -3,11 +3,15 @@ project: takoda-desktop
 allow_lazy_start: false
 source:
   repository: https://github.com/takoda-automation/tkda-desktop-daemon.git
-  commit: dfc885fcb576c96b6b82760ade55a87f48da5417
+  commit: 2ca8e0f8fcd1bf1554ad356054b9bb41b9f76452
   checkout_dir: tmp/dev/tkda-desktop-daemon
 services:
+  scintilla:
+    runtime: host
+    command: ["scintilla-desktop-daemon"]
   daemon:
     runtime: host
+    depends_on: [scintilla]
     build:
       - ["cargo", "build", "--release"]
     command: ["./target/release/tkda-desktop-daemon"]
@@ -16,7 +20,10 @@ services:
       - TKDA_AGENT_ID
       - TKDA_AGENT_TOKEN_FILE
       - TKDA_LOCAL_CONTROL_TOKEN_FILE
+      - TKDA_SCINTILLA_TOKEN_FILE
     environment:
       TKDA_LOCAL_CONTROL_BIND: "127.0.0.1:18087"
       TKDA_LOCAL_SUPERVISOR_BIND: "127.0.0.1:18088"
-      TKDA_LAUNCH_SUPERVISOR: "false"
+      TKDA_SUPERVISOR_RUNTIME: "scintilla"
+      TKDA_SCINTILLA_URL: "http://127.0.0.1:8765"
+      TKDA_LAUNCH_SUPERVISOR: "true"
