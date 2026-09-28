@@ -164,16 +164,9 @@ Takoda needs no inbound Cloudflare Tunnel or public IP for its normal desktop-ag
 
 ## Shared desktop infra dependency
 
-Generic desktop lifecycle/security behavior is moving to `ORESoftware/ores-common-desktop-infra`. This repo declares that dependency in its ORES appliance metadata and blocks stable promotion until an exact common-layer commit is pinned.
+This repository pins the shared desktop implementation `ORESoftware/ores-common-desktop-infra` at exact revision `7bb4ed89ab4aa4a81c5e26e36b91f58d6313cc7c`.
 
-Current state is intentionally `awaiting-repository` with a null revision because GitHub does not yet expose that repository through the connected installation. Product-local behavior remains candidate-only until the common layer can be consumed by exact SHA.
+Generic consumer validation, loopback/secret policy, Cloudflare promotion policy, update/lifecycle rules, readiness policy, and structured-log redaction are owned by that common layer. The local appliance records the exact pin; `common_layer_ci_verified` intentionally remains false until the private cross-org certification workflow runs successfully.
 
+See [docs/local-deployment.md](docs/local-deployment.md) and [the certification workflow](.github/workflows/common-layer-certification.yml).
 
-
-### Desktop browser network isolation gate
-
-Application-layer URL validation in the Playwright/Puppeteer worker is defense in depth, **not** a complete SSRF boundary. DNS can change between validation and the browser's actual connection, and Selenium cannot reliably intercept every subresource request.
-
-Cloud workers are protected by the Kubernetes egress NetworkPolicy in `tkda-infra`. Desktop promotion therefore has a separate `desktop_browser_network_isolation_green` gate. Keep it false until the Scintilla/desktop substrate proves an OS/runtime-level egress boundary that blocks loopback, link-local, private RFC1918/ULA, metadata, and other special-use destinations for browser child processes while preserving public web access.
-
-Do not mark three-browser desktop E2E as production-safe based only on JavaScript hostname/DNS checks.
