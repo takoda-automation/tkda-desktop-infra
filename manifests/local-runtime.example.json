@@ -38,26 +38,66 @@
   "execution": {
     "max_concurrency": 4,
     "pairs": [
-      { "language": "typescript", "browser_backend": "playwright", "mode": "direct" },
-      { "language": "typescript", "browser_backend": "puppeteer", "mode": "direct" },
-      { "language": "typescript", "browser_backend": "selenium", "mode": "direct" },
-      { "language": "python", "browser_backend": "selenium", "mode": "direct" },
-      { "language": "go", "browser_backend": "selenium", "mode": "direct" },
-      { "language": "rust", "browser_backend": "selenium", "mode": "direct" },
-      { "language": "python", "browser_backend": "playwright", "mode": "sidecar" },
-      { "language": "go", "browser_backend": "puppeteer", "mode": "sidecar" }
+      {
+        "language": "typescript",
+        "browser_backend": "playwright",
+        "mode": "direct"
+      },
+      {
+        "language": "typescript",
+        "browser_backend": "puppeteer",
+        "mode": "direct"
+      },
+      {
+        "language": "typescript",
+        "browser_backend": "selenium",
+        "mode": "direct"
+      },
+      {
+        "language": "python",
+        "browser_backend": "selenium",
+        "mode": "direct"
+      },
+      {
+        "language": "go",
+        "browser_backend": "selenium",
+        "mode": "direct"
+      },
+      {
+        "language": "rust",
+        "browser_backend": "selenium",
+        "mode": "direct"
+      },
+      {
+        "language": "python",
+        "browser_backend": "playwright",
+        "mode": "sidecar"
+      },
+      {
+        "language": "go",
+        "browser_backend": "puppeteer",
+        "mode": "sidecar"
+      }
     ],
     "browser_backends": {
       "selenium": {
         "mode": "sidecar",
-        "command": { "program": "chromedriver", "args": ["--port=9515"] },
+        "command": {
+          "program": "chromedriver",
+          "args": [
+            "--port=9515"
+          ]
+        },
         "endpoint": "http://127.0.0.1:9515"
       },
       "playwright": {
         "mode": "sidecar",
         "command": {
           "program": "node",
-          "args": ["../tkda-browser-workers.ts/dist/browser-sidecar.js", "--backend=playwright"]
+          "args": [
+            "../tkda-browser-workers.ts/dist/browser-sidecar.js",
+            "--backend=playwright"
+          ]
         },
         "endpoint": null
       },
@@ -65,13 +105,26 @@
         "mode": "sidecar",
         "command": {
           "program": "node",
-          "args": ["../tkda-browser-workers.ts/dist/browser-sidecar.js", "--backend=puppeteer"]
+          "args": [
+            "../tkda-browser-workers.ts/dist/browser-sidecar.js",
+            "--backend=puppeteer"
+          ]
         },
         "endpoint": null
       }
     }
   },
-  "tunnel": null,
+  "tunnel": {
+    "enabled": false,
+    "mode": "cloudflare-remotely-managed",
+    "hostname": null,
+    "target": "http://127.0.0.1:18087",
+    "token_file": null,
+    "access": {
+      "required": true,
+      "service_token_required": true
+    }
+  },
   "preferences": {
     "keep_takoda_alive_during_lock_screen": false,
     "default_headless": true
