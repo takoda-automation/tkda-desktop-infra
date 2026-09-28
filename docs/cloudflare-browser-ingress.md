@@ -4,6 +4,14 @@ This path is optional. Takoda's normal desktop agent already connects outbound t
 control plane and does not require a public IP. Use this ingress only when an external trusted
 automation client needs to call the authenticated Takoda desktop control API directly.
 
+**Important:** token-based remotely managed tunnels keep their published-application routing
+configuration in Cloudflare, not in this repository. The local helper can validate the token
+file and its own loopback metrics listener, but it cannot prove which origin Cloudflare has
+configured for that token. Therefore remote-token mode is never, by itself, evidence that the
+browser-control isolation promotion gate is green. Promotion requires separately reviewed
+Cloudflare route/Access policy evidence or a locally managed config whose ingress rules are
+validated and pinned.
+
 ## Security boundary
 
 Only publish the Takoda desktop daemon origin:
@@ -25,7 +33,8 @@ tkda-main-server -> Playwright / Puppeteer / Selenium workers
 ```
 
 Never publish ports 18088, 9515, CDP/WebDriver endpoints, Scintilla control ports, or arbitrary
-worker ports. The daemon keeps its own bearer-token authorization even when Cloudflare Access
+worker ports. A remote dashboard change that points the tunnel at one of those endpoints violates
+Takoda's security model even if the tunnel itself remains authenticated. The daemon keeps its own bearer-token authorization even when Cloudflare Access
 is enabled, so the intended machine client supplies both Cloudflare Access credentials and the
 Takoda local-control bearer token.
 
