@@ -22,10 +22,13 @@ generate_secret() {
 WORKER_SECRET_FILE="$CONFIG_DIR/browser-mcp-worker.secret"
 SIGNING_SECRET_FILE="$CONFIG_DIR/browser-mcp-oauth-signing.secret"
 OPERATOR_SECRET_FILE="$CONFIG_DIR/browser-mcp-oauth-operator.secret"
+PROFILE_DIR="$CONFIG_DIR/browser-profile"
 
 generate_secret "$WORKER_SECRET_FILE"
 generate_secret "$SIGNING_SECRET_FILE"
 generate_secret "$OPERATOR_SECRET_FILE"
+mkdir -p "$PROFILE_DIR"
+chmod 700 "$PROFILE_DIR"
 
 if [[ ! -f "$BROWSER_ENV" ]]; then
   cat >"$BROWSER_ENV" <<EOF
@@ -34,6 +37,7 @@ export TKDA_CLOUDFLARE_TUNNEL='takoda-browser-local'
 export TKDA_BROWSER_MCP_ADAPTER_BIND='127.0.0.1:18090'
 export TKDA_LOCAL_CONTROL_URL='http://127.0.0.1:18087'
 export TKDA_BROWSER_MCP_EXECUTION_MODE='headed'
+export TKDA_PLAYWRIGHT_USER_DATA_DIR='$PROFILE_DIR'
 export TKDA_BROWSER_MCP_WORKER_SECRET_FILE='$WORKER_SECRET_FILE'
 export BROWSER_MCP_OAUTH_SIGNING_SECRET_FILE='$SIGNING_SECRET_FILE'
 export BROWSER_MCP_OAUTH_OPERATOR_SECRET_FILE='$OPERATOR_SECRET_FILE'
