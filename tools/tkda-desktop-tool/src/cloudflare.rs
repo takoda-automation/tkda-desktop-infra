@@ -25,7 +25,11 @@ pub fn run_from_env() -> Result<(), String> {
         "stop" => stop(&state),
         "status" => status(&state),
         "doctor" => doctor(&state),
-        _ => Err("TKDA_CLOUDFLARE_COMMAND must be start, stop, status, or doctor".into()),
+        "restart" => {
+            stop(&state)?;
+            start(&state)
+        }
+        _ => Err("TKDA_CLOUDFLARE_COMMAND must be start, stop, status, restart, or doctor".into()),
     }
 }
 
@@ -83,17 +87,24 @@ fn start(state: &Path) -> Result<(), String> {
     let pid = child.id();
     write_pid(&pid_file, pid)?;
 
-    thread::sleep(Duration::from_millis(750));
-    if !process_alive(pid)? {
-        let _ = fs::remove_file(&pid_file);
-        return Err(format!(
-            "cloudflared exited during startup; inspect {}",
-            log_path.display()
-        ));
+    let deadline = std::time::Instant::now() + Duration::from_secs(20);
+    loop {
+        if !process_alive(pid)? {
+            let _ = fs::remove_file(&pid_file);
+            return Err(format!(
+                "cloudflared exited during startup; inspect {}",
+                log_path.display()
+            ));
+        }
+        if metrics_ready(&config.metrics_bind).unwrap_or(false) {
+            println!("cloudflared: ready pid={pid} metrics={}", config.metrics_bind);
+            return Ok(());
+        }
+        if std::time::Instant::now() >= deadline {
+            return Err("cloudflared process is running but readiness did not become healthy".into());
+        }
+        thread::sleep(Duration::from_millis(250));
     }
-
-    println!("cloudflared: running pid={pid}");
-    Ok(())
 }
 
 fn stop(state: &Path) -> Result<(), String> {
@@ -119,8 +130,13 @@ fn status(state: &Path) -> Result<(), String> {
     if !process_alive(pid)? {
         return Err("cloudflared: stopped".into());
     }
-    println!("cloudflared: running pid={pid}");
-    Ok(())
+    let metrics = metrics_addr_from_env()?;
+    if metrics_ready(&metrics)? {
+        println!("cloudflared: healthy pid={pid} metrics={metrics}");
+        Ok(())
+    } else {
+        Err(format!("cloudflared: running-not-ready pid={pid} metrics={metrics}"))
+    }
 }
 
 fn doctor(_state: &Path) -> Result<(), String> {
@@ -152,7 +168,9 @@ fn doctor_with_config(config: &Config) -> Result<(), String> {
     println!("tunnel token file: private regular file");
     println!("cloudflared token-file support: available");
     println!("origin policy: {EXPECTED_ORIGIN} only");
-    println!("public endpoint: {}", config.public_url);
+    if let Some(hostname) = &config.public_hostname {
+        println!("public endpoint: https://{hostname}");
+    }
     println!("remote configuration E2E: still required before promotion");
     Ok(())
 }
@@ -161,7 +179,7 @@ struct Config {
     cloudflared_bin: String,
     tunnel_token_file: PathBuf,
     local_control_token_file: PathBuf,
-    public_url: String,
+    public_hostname: Option<String>,
     metrics_bind: String,
     log_level: String,
     origin: String,
@@ -174,13 +192,14 @@ impl Config {
 
         let tunnel_token_file = absolute_path_env("TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE")?;
         let local_control_token_file = absolute_path_env("TKDA_LOCAL_CONTROL_TOKEN_FILE")?;
-        let public_url = env::var("TKDA_CLOUDFLARE_PUBLIC_URL")
-            .map_err(|_| "TKDA_CLOUDFLARE_PUBLIC_URL is required".to_owned())?;
-        validate_public_url(&public_url)?;
+        let public_hostname = env::var("TKDA_CLOUDFLARE_PUBLIC_HOSTNAME")
+            .ok()
+            .filter(|value| !value.is_empty());
+        if let Some(hostname) = &public_hostname {
+            validate_public_hostname(hostname)?;
+        }
 
-        let metrics_bind = env::var("TKDA_CLOUDFLARE_METRICS_BIND")
-            .unwrap_or_else(|_| "127.0.0.1:20241".into());
-        validate_metrics_bind(&metrics_bind)?;
+        let metrics_bind = metrics_addr_from_env()?;
 
         let log_level = env::var("TKDA_CLOUDFLARE_LOGLEVEL").unwrap_or_else(|_| "info".into());
         if !matches!(log_level.as_str(), "debug" | "info" | "warn" | "error" | "fatal") {
@@ -193,7 +212,7 @@ impl Config {
             cloudflared_bin,
             tunnel_token_file,
             local_control_token_file,
-            public_url,
+            public_hostname,
             metrics_bind,
             log_level,
             origin,
@@ -201,29 +220,38 @@ impl Config {
     }
 }
 
-fn validate_public_url(raw: &str) -> Result<(), String> {
-    let url = url::Url::parse(raw).map_err(|_| "TKDA_CLOUDFLARE_PUBLIC_URL must be a valid URL".to_owned())?;
-    if url.scheme() != "https"
-        || url.host_str().is_none()
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
-        || !matches!(url.path(), "" | "/")
+fn validate_public_hostname(raw: &str) -> Result<(), String> {
+    if raw.len() > 253
+        || !raw.contains('.')
+        || raw.starts_with('.')
+        || raw.ends_with('.')
+        || raw.contains("..")
+        || !raw
+            .chars()
+            .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-'))
     {
         return Err(
-            "TKDA_CLOUDFLARE_PUBLIC_URL must be credential-free root HTTPS without query or fragment".into(),
+            "TKDA_CLOUDFLARE_PUBLIC_HOSTNAME must be a bounded DNS hostname".into(),
         );
     }
     Ok(())
+}
+
+fn metrics_addr_from_env() -> Result<String, String> {
+    let value = env::var("TKDA_CLOUDFLARE_METRICS_ADDR")
+        .unwrap_or_else(|_| "127.0.0.1:20241".into());
+    validate_metrics_bind(&value)?;
+    Ok(value)
 }
 
 fn validate_metrics_bind(raw: &str) -> Result<(), String> {
     let address: SocketAddr = raw
         .parse()
         .map_err(|_| "TKDA_CLOUDFLARE_METRICS_BIND must be a socket address".to_owned())?;
-    if !address.ip().is_loopback() {
-        return Err("TKDA_CLOUDFLARE_METRICS_BIND must be loopback".into());
+    if !address.ip().is_loopback() || address.port() == 0 {
+        return Err(
+            "TKDA_CLOUDFLARE_METRICS_ADDR must be literal loopback with a nonzero port".into(),
+        );
     }
     Ok(())
 }
@@ -308,6 +336,42 @@ fn verify_local_daemon(token: &str) -> Result<(), String> {
         return Err("daemon status identity is invalid".into());
     }
     Ok(())
+}
+
+fn metrics_ready(raw: &str) -> Result<bool, String> {
+    let address: SocketAddr = raw
+        .parse()
+        .map_err(|_| "TKDA_CLOUDFLARE_METRICS_ADDR must be a socket address".to_owned())?;
+    validate_metrics_bind(raw)?;
+    let mut stream = match TcpStream::connect_timeout(&address, Duration::from_millis(500)) {
+        Ok(stream) => stream,
+        Err(_) => return Ok(false),
+    };
+    stream
+        .set_read_timeout(Some(Duration::from_millis(750)))
+        .map_err(|e| format!("set cloudflared metrics timeout: {e}"))?;
+    stream
+        .set_write_timeout(Some(Duration::from_millis(750)))
+        .map_err(|e| format!("set cloudflared metrics timeout: {e}"))?;
+
+    let host = if address.is_ipv6() {
+        format!("[{}]:{}", address.ip(), address.port())
+    } else {
+        address.to_string()
+    };
+    let request = format!(
+        "GET /ready HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
+    );
+    stream
+        .write_all(request.as_bytes())
+        .map_err(|e| format!("write cloudflared readiness request: {e}"))?;
+    let mut bytes = Vec::new();
+    stream
+        .take(16 * 1024)
+        .read_to_end(&mut bytes)
+        .map_err(|e| format!("read cloudflared readiness response: {e}"))?;
+    let text = String::from_utf8_lossy(&bytes);
+    Ok(text.starts_with("HTTP/1.1 200 ") || text.starts_with("HTTP/1.0 200 "))
 }
 
 fn state_dir() -> Result<PathBuf, String> {
@@ -423,15 +487,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn public_url_requires_root_https() {
-        assert!(validate_public_url("https://browser.example.com").is_ok());
+    fn public_hostname_is_dns_only() {
+        assert!(validate_public_hostname("browser.example.com").is_ok());
         for value in [
-            "http://browser.example.com",
-            "https://user:pass@browser.example.com",
-            "https://browser.example.com/path",
-            "https://browser.example.com?x=1",
+            "https://browser.example.com",
+            "localhost",
+            ".example.com",
+            "example.com.",
+            "example..com",
+            "example.com/path",
         ] {
-            assert!(validate_public_url(value).is_err(), "{value}");
+            assert!(validate_public_hostname(value).is_err(), "{value}");
         }
     }
 
@@ -440,6 +506,7 @@ mod tests {
         assert!(validate_metrics_bind("127.0.0.1:20241").is_ok());
         assert!(validate_metrics_bind("[::1]:20241").is_ok());
         assert!(validate_metrics_bind("0.0.0.0:20241").is_err());
+        assert!(validate_metrics_bind("127.0.0.1:0").is_err());
     }
 
     #[test]
