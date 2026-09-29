@@ -218,11 +218,22 @@ mod tests {
             std::process::id()
         ));
         fs::create_dir_all(&root).expect("temp repo");
-        run(Command::new("git").args(["init", "--quiet", path_str(&root).expect("utf8 path")]), "init test repo")
-            .expect("git init");
+        run(
+            Command::new("git").args(["init", "--quiet", path_str(&root).expect("utf8 path")]),
+            "init test repo",
+        )
+        .expect("git init");
         fs::write(root.join("tracked.txt"), "clean\n").expect("tracked fixture");
-        run(Command::new("git").args(["-C", path_str(&root).expect("utf8 path"), "add", "tracked.txt"]), "stage fixture")
-            .expect("git add");
+        run(
+            Command::new("git").args([
+                "-C",
+                path_str(&root).expect("utf8 path"),
+                "add",
+                "tracked.txt",
+            ]),
+            "stage fixture",
+        )
+        .expect("git add");
         run(
             Command::new("git").args([
                 "-C",
