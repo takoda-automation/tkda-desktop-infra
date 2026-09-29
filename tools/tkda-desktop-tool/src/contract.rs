@@ -276,6 +276,7 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     }
     for checked in [
         "scripts/bootstrap.sh",
+        "scripts/cloudflare-tunnel.sh",
         ".github/workflows/ci.yml",
         ".github/workflows/desktop-contract.yml",
     ] {
@@ -285,6 +286,34 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
             || source.contains("ruby <<")
         {
             return Err(format!("non-Rust durable tooling remains in {checked}"));
+        }
+    }
+
+    let cloudflare_shim =
+        fs::read_to_string(root.join("scripts/cloudflare-tunnel.sh")).map_err(|e| e.to_string())?;
+    if cloudflare_shim.lines().count() > 30
+        || !cloudflare_shim.contains("--bin tkda-cloudflare")
+        || cloudflare_shim.contains("cloudflared tunnel")
+        || cloudflare_shim.contains("curl ")
+        || cloudflare_shim.contains("kill ")
+    {
+        return Err(
+            "Cloudflare shell wrapper must remain a thin Rust-tooling shim".into(),
+        );
+    }
+
+    let cloudflare_source =
+        fs::read_to_string(root.join("tools/tkda-desktop-tool/src/cloudflare.rs"))
+            .map_err(|e| e.to_string())?;
+    for required in [
+        "http://127.0.0.1:18087",
+        "TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE",
+        "TKDA_LOCAL_CONTROL_TOKEN_FILE",
+        "--token-file",
+        "--no-autoupdate",
+    ] {
+        if !cloudflare_source.contains(required) {
+            return Err(format!("Cloudflare Rust boundary is missing {required}"));
         }
     }
 
