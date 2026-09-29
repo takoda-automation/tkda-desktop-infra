@@ -4,7 +4,7 @@
   "promotion_gate": "all referenced component CI and cross-repo desktop E2E must be green before promotion",
   "substrate": {
     "repo": "scintilla-run/scintilla-desktop-infra",
-    "rev": "6226a8e308e2f7101ed4326891cc02ab59af4930",
+    "rev": "fa9a7f17e1fd66943651e02a57eae67ee7d4dc31",
     "protocol": "scintilla.local-control/v1",
     "daemon_url": "http://127.0.0.1:8765",
     "ingress_url": "http://127.0.0.1:8091",
@@ -14,42 +14,42 @@
     {
       "name": "desktop-daemon",
       "repo": "takoda-automation/tkda-desktop-daemon",
-      "rev": "dfc885fcb576c96b6b82760ade55a87f48da5417",
-      "pull_request": 11,
+      "rev": "80a6df6059a28dddb598139d6f42c53a825ccad7",
+      "pull_request": 13,
       "kind": "rust-binary"
     },
     {
       "name": "main-supervisor",
       "repo": "takoda-automation/tkda-main-server.rs",
-      "rev": "8c7453f1483d04425d286024622e2918610ecd1b",
+      "rev": "1d828775fbaaffc29ebcdde3009d59e09855d0d8",
       "kind": "rust-binary",
       "runtime_role": "scintilla-managed-long-lived-worker"
     },
     {
       "name": "browser-workers",
       "repo": "takoda-automation/tkda-browser-workers.ts",
-      "rev": "602c7c793143e44c2dd03b9c57ed8a3ccf687eb0",
-      "pull_request": 12,
+      "rev": "179235e1280fec62ca813c221f1d13f58d9008ef",
+      "pull_request": 16,
       "kind": "node-worker",
       "runtime_role": "takoda-supervisor-managed-per-run-child-plus-scintilla-managed-selenium-node"
     },
     {
       "name": "selenium-server",
       "repo": "takoda-automation/tkda-selenium-server",
-      "rev": "7ae290ccf970a443d46bba37aa1bdbed7699a299",
+      "rev": "46c82da144fdc7bc3f0a5870326e62f0fc2b2c34",
       "kind": "rust-service"
     },
     {
       "name": "desktop-cli",
       "repo": "takoda-automation/tkda-desktop-cli",
-      "rev": "b834365b73b11e047847895cbeced51e45f692ef",
+      "rev": "b9d821f33098be17cecb22d9a68eebd6bb6f5e86",
       "merged_pull_request": 1,
       "kind": "rust-binary"
     },
     {
       "name": "scintilla-desktop-infra",
       "repo": "scintilla-run/scintilla-desktop-infra",
-      "rev": "6226a8e308e2f7101ed4326891cc02ab59af4930",
+      "rev": "fa9a7f17e1fd66943651e02a57eae67ee7d4dc31",
       "kind": "integration"
     }
   ],
