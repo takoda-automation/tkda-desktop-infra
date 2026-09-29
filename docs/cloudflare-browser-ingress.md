@@ -84,8 +84,7 @@ bash ./scripts/cloudflare-tunnel.sh status
 ./scripts/status.sh
 ```
 
-The tunnel helper uses `cloudflared tunnel run --token-file`, binds its metrics/readiness
-listener to loopback, and never receives the token value on argv.
+The compatibility shell helper delegates to the Rust `tkda-cloudflare` tool. The Rust boundary uses a fixed `cloudflared tunnel ... run --token-file` argv, binds metrics/readiness to literal loopback, reads the tunnel and Takoda bearer from private regular files, verifies the authenticated daemon identity at `127.0.0.1:18087`, and never places either secret value on argv.
 
 ## Remote client request
 
@@ -124,3 +123,18 @@ job-search scheduler
 
 If the public ingress is unavailable, the existing outbound Takoda lease channel remains the
 preferred fallback because it needs no inbound route at all.
+
+
+## Local lifecycle authority
+
+Cloudflare lifecycle and admission are implemented in `tools/tkda-desktop-tool`, not in Bash. `scripts/cloudflare-tunnel.sh` only loads the existing desktop env and dispatches `start`, `stop`, `status`, or `restart` to the Rust tool.
+
+The Rust tool preserves the existing environment contract:
+
+- `TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE`
+- `TKDA_CLOUDFLARE_PUBLIC_HOSTNAME`
+- `TKDA_CLOUDFLARE_METRICS_ADDR`
+- `TKDA_CLOUDFLARED_BIN`
+- `TKDA_CLOUDFLARE_AUTO_START`
+
+It also accepts `TKDA_CLOUDFLARE_ORIGIN` only as a local assertion and requires it to equal `http://127.0.0.1:18087`. This does **not** prove the remotely managed tunnel route points there; the external Cloudflare route/Access promotion gate remains false until independently reviewed and negative-tested.
