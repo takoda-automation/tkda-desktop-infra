@@ -40,6 +40,7 @@ cat >> .desktop/env <<'EOF'
 export TKDA_CLOUDFLARE_TUNNEL_ENABLED=true
 export TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE="$HOME/.config/takoda/cloudflared.token"
 export TKDA_CLOUDFLARE_PUBLIC_URL="https://browser.example.com"
+export TKDA_CLOUDFLARE_ORIGIN="http://127.0.0.1:18087"
 EOF
 ```
 
@@ -51,7 +52,7 @@ Then:
 ./scripts/status.sh
 ```
 
-`scripts/up.sh` starts `cloudflared` only when `TKDA_CLOUDFLARE_TUNNEL_ENABLED=true`. The tunnel token is passed through `--token-file`, not the process command line.
+`scripts/up.sh` starts `cloudflared` only when `TKDA_CLOUDFLARE_TUNNEL_ENABLED=true`. `scripts/cloudflare-tunnel.sh` is only a thin compatibility shim; durable validation and lifecycle live in the Rust `tkda-cloudflare` tool. The Rust boundary requires the origin to be exactly `http://127.0.0.1:18087`, keeps metrics on loopback, requires private regular token files, disables cloudflared auto-update, and passes the tunnel credential with `--token-file` rather than placing its value in argv.
 
 ## Remote request shape
 
@@ -68,3 +69,16 @@ curl --fail-with-body \
 Create runs through `POST /v1/runs`, then poll `GET /v1/runs/{run_id}` or cancel with `POST /v1/runs/{run_id}/cancel`. The daemon enforces desktop placement and headed-mode policy before forwarding a run to the local supervisor.
 
 For the job-search application pipeline, use a dedicated agent/device credential and a dedicated Cloudflare Access service token so audit logs can distinguish scheduler traffic from interactive desktop use.
+
+
+## Promotion proof still required
+
+This optional ingress remains experimental until a remote negative-test lane proves all of the following on the exact candidate revision:
+
+- requests without Cloudflare Access credentials are rejected before reaching Takoda;
+- requests with Access credentials but without the independent Takoda bearer are rejected by the daemon;
+- authenticated requests can reach only the daemon control surface;
+- ports 18088, 9515, 8765, 8091, browser CDP, and raw WebDriver remain unreachable through the public hostname;
+- the normal outbound desktop-agent path continues to work with the tunnel completely disabled.
+
+The Rust local admission boundary does not make these remote Cloudflare configuration claims true by itself.
