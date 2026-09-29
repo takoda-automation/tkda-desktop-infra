@@ -1,6 +1,6 @@
 use std::{
     env,
-    fs::{self, File, OpenOptions},
+    fs::{self, OpenOptions},
     io::{Read, Write},
     net::{SocketAddr, TcpStream},
     path::{Path, PathBuf},
@@ -152,6 +152,7 @@ fn doctor_with_config(config: &Config) -> Result<(), String> {
     println!("tunnel token file: private regular file");
     println!("cloudflared token-file support: available");
     println!("origin policy: {EXPECTED_ORIGIN} only");
+    println!("public endpoint: {}", config.public_url);
     println!("remote configuration E2E: still required before promotion");
     Ok(())
 }
@@ -351,6 +352,11 @@ fn read_pid(path: &Path) -> Result<Option<u32>, String> {
 }
 
 fn write_pid(path: &Path, pid: u32) -> Result<(), String> {
+    if let Ok(meta) = fs::symlink_metadata(path) {
+        if !meta.file_type().is_file() || meta.file_type().is_symlink() {
+            return Err("cloudflared pid path must be a regular non-symlink file".into());
+        }
+    }
     let mut options = OpenOptions::new();
     options.write(true).create(true).truncate(true);
     let mut file = options.open(path).map_err(|e| format!("write pid file: {e}"))?;
