@@ -208,11 +208,64 @@ fn output(command: &mut Command, label: &str) -> Result<String, String> {
 mod tests {
     use super::*;
 
+    fn temp_git_repo() -> PathBuf {
+        let nonce = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .expect("clock")
+            .as_nanos();
+        let root = std::env::temp_dir().join(format!(
+            "tkda-materialize-cleanliness-{}-{nonce}",
+            std::process::id()
+        ));
+        fs::create_dir_all(&root).expect("temp repo");
+        run(Command::new("git").args(["init", "--quiet", path_str(&root).expect("utf8 path")]), "init test repo")
+            .expect("git init");
+        fs::write(root.join("tracked.txt"), "clean\n").expect("tracked fixture");
+        run(Command::new("git").args(["-C", path_str(&root).expect("utf8 path"), "add", "tracked.txt"]), "stage fixture")
+            .expect("git add");
+        run(
+            Command::new("git").args([
+                "-C",
+                path_str(&root).expect("utf8 path"),
+                "-c",
+                "user.name=Takoda CI",
+                "-c",
+                "user.email=ci@example.invalid",
+                "commit",
+                "--quiet",
+                "-m",
+                "fixture",
+            ]),
+            "commit fixture",
+        )
+        .expect("git commit");
+        root
+    }
+
     #[test]
-    fn cleanliness_output_is_fail_closed() {
-        assert!("".trim().is_empty());
-        assert!(!"?? local.tmp".trim().is_empty());
-        assert!(!" M src/main.rs".trim().is_empty());
+    fn checkout_cleanliness_detects_tracked_and_untracked_contamination() {
+        let root = temp_git_repo();
+        assert!(ensure_clean_checkout(&root, "fixture").is_ok());
+
+        fs::write(root.join("tracked.txt"), "modified\n").expect("modify fixture");
+        assert!(ensure_clean_checkout(&root, "fixture").is_err());
+
+        run(
+            Command::new("git").args([
+                "-C",
+                path_str(&root).expect("utf8 path"),
+                "checkout",
+                "--quiet",
+                "--",
+                "tracked.txt",
+            ]),
+            "restore fixture",
+        )
+        .expect("restore tracked file");
+        fs::write(root.join("untracked.tmp"), "residue\n").expect("untracked fixture");
+        assert!(ensure_clean_checkout(&root, "fixture").is_err());
+
+        fs::remove_dir_all(root).expect("cleanup test repo");
     }
 
     #[test]
