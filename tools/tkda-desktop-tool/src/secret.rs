@@ -22,13 +22,17 @@ pub fn read_private_secret(path: &Path, label: &str, max_bytes: u64) -> Result<S
     {
         use std::os::unix::fs::PermissionsExt;
         if meta.permissions().mode() & 0o077 != 0 {
-            return Err(format!("{label} permissions are too broad; expected mode 0600"));
+            return Err(format!(
+                "{label} permissions are too broad; expected mode 0600"
+            ));
         }
     }
     let value = fs::read_to_string(path).map_err(|e| format!("read {label}: {e}"))?;
     let value = value.trim();
     if value.len() < 32 || value.chars().any(char::is_whitespace) {
-        return Err(format!("{label} must contain at least 32 non-whitespace characters"));
+        return Err(format!(
+            "{label} must contain at least 32 non-whitespace characters"
+        ));
     }
     Ok(value.to_owned())
 }
