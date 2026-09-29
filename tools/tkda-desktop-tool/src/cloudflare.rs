@@ -75,7 +75,19 @@ fn start(state: &Path) -> Result<(), String> {
         .stdout(Stdio::from(stdout))
         .stderr(Stdio::from(stderr));
 
-    for key in ["PATH", "PATHEXT", "SYSTEMROOT", "WINDIR", "HOME", "USERPROFILE", "TMPDIR", "TMP", "TEMP", "LANG", "LC_ALL"] {
+    for key in [
+        "PATH",
+        "PATHEXT",
+        "SYSTEMROOT",
+        "WINDIR",
+        "HOME",
+        "USERPROFILE",
+        "TMPDIR",
+        "TMP",
+        "TEMP",
+        "LANG",
+        "LC_ALL",
+    ] {
         if let Ok(value) = env::var(key) {
             command.env(key, value);
         }
@@ -97,11 +109,16 @@ fn start(state: &Path) -> Result<(), String> {
             ));
         }
         if metrics_ready(&config.metrics_bind).unwrap_or(false) {
-            println!("cloudflared: ready pid={pid} metrics={}", config.metrics_bind);
+            println!(
+                "cloudflared: ready pid={pid} metrics={}",
+                config.metrics_bind
+            );
             return Ok(());
         }
         if std::time::Instant::now() >= deadline {
-            return Err("cloudflared process is running but readiness did not become healthy".into());
+            return Err(
+                "cloudflared process is running but readiness did not become healthy".into(),
+            );
         }
         thread::sleep(Duration::from_millis(250));
     }
@@ -135,7 +152,9 @@ fn status(state: &Path) -> Result<(), String> {
         println!("cloudflared: healthy pid={pid} metrics={metrics}");
         Ok(())
     } else {
-        Err(format!("cloudflared: running-not-ready pid={pid} metrics={metrics}"))
+        Err(format!(
+            "cloudflared: running-not-ready pid={pid} metrics={metrics}"
+        ))
     }
 }
 
@@ -187,7 +206,8 @@ struct Config {
 
 impl Config {
     fn from_env() -> Result<Self, String> {
-        let cloudflared_bin = env::var("TKDA_CLOUDFLARED_BIN").unwrap_or_else(|_| "cloudflared".into());
+        let cloudflared_bin =
+            env::var("TKDA_CLOUDFLARED_BIN").unwrap_or_else(|_| "cloudflared".into());
         validate_local_executable(&cloudflared_bin)?;
 
         let tunnel_token_file = absolute_path_env("TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE")?;
@@ -202,8 +222,13 @@ impl Config {
         let metrics_bind = metrics_addr_from_env()?;
 
         let log_level = env::var("TKDA_CLOUDFLARE_LOGLEVEL").unwrap_or_else(|_| "info".into());
-        if !matches!(log_level.as_str(), "debug" | "info" | "warn" | "error" | "fatal") {
-            return Err("TKDA_CLOUDFLARE_LOGLEVEL must be debug, info, warn, error, or fatal".into());
+        if !matches!(
+            log_level.as_str(),
+            "debug" | "info" | "warn" | "error" | "fatal"
+        ) {
+            return Err(
+                "TKDA_CLOUDFLARE_LOGLEVEL must be debug, info, warn, error, or fatal".into(),
+            );
         }
 
         let origin = env::var("TKDA_CLOUDFLARE_ORIGIN").unwrap_or_else(|_| EXPECTED_ORIGIN.into());
@@ -230,16 +255,14 @@ fn validate_public_hostname(raw: &str) -> Result<(), String> {
             .chars()
             .all(|ch| ch.is_ascii_alphanumeric() || matches!(ch, '.' | '-'))
     {
-        return Err(
-            "TKDA_CLOUDFLARE_PUBLIC_HOSTNAME must be a bounded DNS hostname".into(),
-        );
+        return Err("TKDA_CLOUDFLARE_PUBLIC_HOSTNAME must be a bounded DNS hostname".into());
     }
     Ok(())
 }
 
 fn metrics_addr_from_env() -> Result<String, String> {
-    let value = env::var("TKDA_CLOUDFLARE_METRICS_ADDR")
-        .unwrap_or_else(|_| "127.0.0.1:20241".into());
+    let value =
+        env::var("TKDA_CLOUDFLARE_METRICS_ADDR").unwrap_or_else(|_| "127.0.0.1:20241".into());
     validate_metrics_bind(&value)?;
     Ok(value)
 }
@@ -260,10 +283,14 @@ fn validate_local_executable(raw: &str) -> Result<(), String> {
     let path = Path::new(raw);
     let contains_separator = raw.contains('/') || raw.contains('\\');
     if contains_separator && !path.is_absolute() {
-        return Err("TKDA_CLOUDFLARED_BIN paths must be absolute; otherwise use a bare executable name".into());
+        return Err(
+            "TKDA_CLOUDFLARED_BIN paths must be absolute; otherwise use a bare executable name"
+                .into(),
+        );
     }
     if path.is_absolute() {
-        let meta = fs::symlink_metadata(path).map_err(|e| format!("inspect TKDA_CLOUDFLARED_BIN: {e}"))?;
+        let meta =
+            fs::symlink_metadata(path).map_err(|e| format!("inspect TKDA_CLOUDFLARED_BIN: {e}"))?;
         if !meta.file_type().is_file() || meta.file_type().is_symlink() {
             return Err("TKDA_CLOUDFLARED_BIN must be a regular non-symlink file".into());
         }
@@ -298,7 +325,9 @@ fn ensure_cloudflared_supports_token_file(bin: &str) -> Result<(), String> {
 
 fn verify_local_daemon(token: &str) -> Result<(), String> {
     let mut stream = TcpStream::connect_timeout(
-        &DAEMON_ADDR.parse().map_err(|_| "invalid internal daemon address".to_owned())?,
+        &DAEMON_ADDR
+            .parse()
+            .map_err(|_| "invalid internal daemon address".to_owned())?,
         Duration::from_secs(2),
     )
     .map_err(|e| format!("local Takoda daemon is unavailable: {e}"))?;
@@ -321,7 +350,8 @@ fn verify_local_daemon(token: &str) -> Result<(), String> {
         .take(MAX_STATUS_BYTES)
         .read_to_end(&mut bytes)
         .map_err(|e| format!("read daemon status response: {e}"))?;
-    let text = String::from_utf8(bytes).map_err(|_| "daemon status response is not UTF-8".to_owned())?;
+    let text =
+        String::from_utf8(bytes).map_err(|_| "daemon status response is not UTF-8".to_owned())?;
     let (headers, body) = text
         .split_once("\r\n\r\n")
         .ok_or_else(|| "daemon status response is malformed".to_owned())?;
@@ -359,9 +389,7 @@ fn metrics_ready(raw: &str) -> Result<bool, String> {
     } else {
         address.to_string()
     };
-    let request = format!(
-        "GET /ready HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n"
-    );
+    let request = format!("GET /ready HTTP/1.1\r\nHost: {host}\r\nConnection: close\r\n\r\n");
     stream
         .write_all(request.as_bytes())
         .map_err(|e| format!("write cloudflared readiness request: {e}"))?;
@@ -378,7 +406,9 @@ fn state_dir() -> Result<PathBuf, String> {
     let raw = env::var("TKDA_DESKTOP_STATE").unwrap_or_else(|_| ".desktop".into());
     let path = PathBuf::from(raw);
     if !path.is_absolute() {
-        return Err("TKDA_DESKTOP_STATE must be absolute for Cloudflare lifecycle management".into());
+        return Err(
+            "TKDA_DESKTOP_STATE must be absolute for Cloudflare lifecycle management".into(),
+        );
     }
     fs::create_dir_all(&path).map_err(|e| format!("create desktop state: {e}"))?;
     let meta = fs::symlink_metadata(&path).map_err(|e| format!("inspect desktop state: {e}"))?;
@@ -423,7 +453,9 @@ fn write_pid(path: &Path, pid: u32) -> Result<(), String> {
     }
     let mut options = OpenOptions::new();
     options.write(true).create(true).truncate(true);
-    let mut file = options.open(path).map_err(|e| format!("write pid file: {e}"))?;
+    let mut file = options
+        .open(path)
+        .map_err(|e| format!("write pid file: {e}"))?;
     writeln!(file, "{pid}").map_err(|e| format!("write pid file: {e}"))
 }
 
@@ -442,7 +474,8 @@ fn process_alive(pid: u32) -> Result<bool, String> {
         .args(["/FI", &format!("PID eq {pid}"), "/FO", "CSV", "/NH"])
         .output()
         .map_err(|e| format!("inspect cloudflared process: {e}"))?;
-    Ok(output.status.success() && String::from_utf8_lossy(&output.stdout).contains(&pid.to_string()))
+    Ok(output.status.success()
+        && String::from_utf8_lossy(&output.stdout).contains(&pid.to_string()))
 }
 
 #[cfg(unix)]
