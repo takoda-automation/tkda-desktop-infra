@@ -7,6 +7,36 @@ use std::{
 
 use uuid::Uuid;
 
+pub fn read_private_secret(path: &Path, label: &str, max_bytes: u64) -> Result<String, String> {
+    if !path.is_absolute() {
+        return Err(format!("{label} must be absolute"));
+    }
+    let meta = fs::symlink_metadata(path).map_err(|e| format!("inspect {label}: {e}"))?;
+    if !meta.file_type().is_file() || meta.file_type().is_symlink() {
+        return Err(format!("{label} must be a regular non-symlink file"));
+    }
+    if meta.len() == 0 || meta.len() > max_bytes {
+        return Err(format!("{label} must contain 1..={max_bytes} bytes"));
+    }
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        if meta.permissions().mode() & 0o077 != 0 {
+            return Err(format!(
+                "{label} permissions are too broad; expected mode 0600"
+            ));
+        }
+    }
+    let value = fs::read_to_string(path).map_err(|e| format!("read {label}: {e}"))?;
+    let value = value.trim();
+    if value.len() < 32 || value.chars().any(char::is_whitespace) {
+        return Err(format!(
+            "{label} must contain at least 32 non-whitespace characters"
+        ));
+    }
+    Ok(value.to_owned())
+}
+
 pub fn ensure_token_from_env() -> Result<(), String> {
     let path = PathBuf::from(
         env::var("TKDA_TOKEN_FILE").map_err(|_| "TKDA_TOKEN_FILE is required".to_owned())?,
