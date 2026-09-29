@@ -291,15 +291,34 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     }
     let tunnel_helper =
         fs::read_to_string(root.join("scripts/cloudflare-tunnel.sh")).map_err(|e| e.to_string())?;
-    if !tunnel_helper.contains("TKDA_CLOUDFLARE_METRICS_ADDR must be a loopback host:port")
-        || !tunnel_helper
-            .contains("tunnel token file must not be readable or writable by group/other users")
+    if tunnel_helper.lines().count() > 30
+        || !tunnel_helper.contains("--bin tkda-cloudflare")
+        || tunnel_helper.contains("cloudflared tunnel")
+        || tunnel_helper.contains("curl ")
+        || tunnel_helper.contains("kill ")
     {
-        return Err("Cloudflare local helper hardening drifted".into());
+        return Err("Cloudflare shell wrapper must remain a thin Rust-tooling shim".into());
+    }
+
+    let cloudflare_source =
+        fs::read_to_string(root.join("tools/tkda-desktop-tool/src/cloudflare.rs"))
+            .map_err(|e| e.to_string())?;
+    for required in [
+        "http://127.0.0.1:18087",
+        "TKDA_CLOUDFLARE_TUNNEL_TOKEN_FILE",
+        "TKDA_LOCAL_CONTROL_TOKEN_FILE",
+        "TKDA_CLOUDFLARE_METRICS_ADDR",
+        "--token-file",
+        "--no-autoupdate",
+    ] {
+        if !cloudflare_source.contains(required) {
+            return Err(format!("Cloudflare Rust boundary is missing {required}"));
+        }
     }
 
     for checked in [
         "scripts/bootstrap.sh",
+        "scripts/cloudflare-tunnel.sh",
         ".github/workflows/ci.yml",
         ".github/workflows/desktop-contract.yml",
     ] {
