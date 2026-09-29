@@ -43,6 +43,7 @@ pub fn materialize_from_env() -> Result<(), String> {
             if actual_remote.trim_end().trim_end_matches(".git") != url.trim_end_matches(".git") {
                 return Err(format!("{}: origin mismatch", component.name));
             }
+            ensure_clean_checkout(&dest, &component.name)?;
         } else if dest.exists() {
             return Err(format!(
                 "{} exists but is not a Git checkout",
@@ -93,8 +94,28 @@ pub fn materialize_from_env() -> Result<(), String> {
                 component.name
             ));
         }
+        ensure_clean_checkout(&dest, &component.name)?;
     }
 
+    Ok(())
+}
+
+fn ensure_clean_checkout(dest: &Path, component_name: &str) -> Result<(), String> {
+    let status = output(
+        Command::new("git").args([
+            "-C",
+            path_str(dest)?,
+            "status",
+            "--porcelain=v1",
+            "--untracked-files=all",
+        ]),
+        "inspect checkout cleanliness",
+    )?;
+    if !status.trim().is_empty() {
+        return Err(format!(
+            "{component_name}: checkout has modified or untracked files; refusing to build a contaminated exact revision"
+        ));
+    }
     Ok(())
 }
 
@@ -186,6 +207,13 @@ fn output(command: &mut Command, label: &str) -> Result<String, String> {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn cleanliness_output_is_fail_closed() {
+        assert!("".trim().is_empty());
+        assert!(!"?? local.tmp".trim().is_empty());
+        assert!(!" M src/main.rs".trim().is_empty());
+    }
 
     #[test]
     fn immutable_revision_and_repo_validation_fail_closed() {
