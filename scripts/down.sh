@@ -9,17 +9,6 @@ if [[ -f "$ROOT/scripts/cloudflare-tunnel.sh" ]]; then
   bash "$ROOT/scripts/cloudflare-tunnel.sh" stop || true
 fi
 
-if [[ -f "$STATE/tkda-daemon.pid" ]]; then
-  pid="$(cat "$STATE/tkda-daemon.pid")"
-  kill "$pid" 2>/dev/null || true
-  for _ in {1..30}; do
-    kill -0 "$pid" 2>/dev/null || break
-    sleep 0.1
-  done
-  kill -9 "$pid" 2>/dev/null || true
-  rm -f "$STATE/tkda-daemon.pid"
-fi
-
 if [[ -f "$ENV_FILE" ]]; then
   # shellcheck disable=SC1090
   source "$ENV_FILE"
