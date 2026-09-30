@@ -291,8 +291,16 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
     }
     if !policy.contains("allow_remote_shell = false")
         || !policy.contains("expose_browser_control_ports = false")
+        || !policy.contains("manage_takoda_daemon = true")
     {
         return Err("desktop security policy drifted".into());
+    }
+
+    let bootstrap = fs::read_to_string(root.join("scripts/bootstrap.sh")).map_err(|e| e.to_string())?;
+    for required in ["umask 077", "chmod 0700", "chmod 0600 \"$STATE/env\""] {
+        if !bootstrap.contains(required) {
+            return Err(format!("bootstrap private-state hardening missing: {required}"));
+        }
     }
 
     let runtime_schema: Value = read_json(root.join("manifests/local-runtime.schema.json"))?;
