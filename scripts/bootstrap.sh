@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+umask 077
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 STATE="${TKDA_DESKTOP_STATE:-$ROOT/.desktop}"
@@ -8,6 +9,7 @@ BIN="$STATE/bin"
 CONFIG="$STATE/config"
 TOOL_MANIFEST="$ROOT/tools/tkda-desktop-tool/Cargo.toml"
 mkdir -p "$SRC" "$BIN" "$CONFIG" "$STATE/logs"
+chmod 0700 "$STATE" "$SRC" "$BIN" "$CONFIG" "$STATE/logs"
 
 need() { command -v "$1" >/dev/null 2>&1 || { echo "missing required tool: $1" >&2; exit 1; }; }
 for tool in git cargo node npm go curl; do need "$tool"; done
@@ -58,6 +60,7 @@ export SCINTILLA_DESKTOP_INFRA_ROOT="$SRC/scintilla-desktop-infra"
 # export TKDA_CLOUDFLARE_METRICS_ADDR="127.0.0.1:20241"
 export PATH="$BIN:\$PATH"
 EOF
+chmod 0600 "$STATE/env"
 
 echo "Takoda desktop candidate appliance bootstrapped at $STATE"
 echo "Add TKDA_AGENT_URL, TKDA_AGENT_ID, TKDA_AGENT_TOKEN_FILE, TKDA_ALLOW_HEADED, TKDA_CHROMEDRIVER_BIN,"
