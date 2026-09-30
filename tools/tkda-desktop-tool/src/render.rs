@@ -185,10 +185,14 @@ fn bounded_identifier_env(key: &str, max: usize) -> Result<String, String> {
 
 fn secure_agent_url_env(key: &str) -> Result<String, String> {
     let raw = env::var(key).map_err(|_| format!("{key} is required"))?;
+    secure_agent_url(&raw, key)
+}
+
+fn secure_agent_url(raw: &str, key: &str) -> Result<String, String> {
     if raw.len() > 2_048 {
         return Err(format!("{key} exceeds 2048 characters"));
     }
-    let url = Url::parse(&raw).map_err(|_| format!("{key} is not a valid URL"))?;
+    let url = Url::parse(raw).map_err(|_| format!("{key} is not a valid URL"))?;
     let host = url
         .host_str()
         .ok_or_else(|| format!("{key} is missing a host"))?
@@ -367,6 +371,16 @@ mod tests {
                 .iter()
                 .any(|worker| worker["id"] == "tkda-local-supervisor")
         );
+    }
+
+    #[test]
+    fn outbound_agent_url_requires_tls_except_literal_loopback() {
+        assert!(secure_agent_url("wss://api.takoda.dev/v1/agents/connect", "agent").is_ok());
+        assert!(secure_agent_url("ws://127.0.0.1:9000/v1/agents/connect", "agent").is_ok());
+        assert!(secure_agent_url("ws://[::1]:9000/v1/agents/connect", "agent").is_ok());
+        assert!(secure_agent_url("ws://example.com/v1/agents/connect", "agent").is_err());
+        assert!(secure_agent_url("wss://user:secret@example.com/path", "agent").is_err());
+        assert!(secure_agent_url("wss://example.com/path?token=secret", "agent").is_err());
     }
 
     #[test]
