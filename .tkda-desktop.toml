@@ -17,6 +17,7 @@ repository = "scintilla-run/scintilla-desktop-infra"
 protocol = "scintilla.local-control/v1"
 daemon_url = "http://127.0.0.1:8765"
 ingress_url = "http://127.0.0.1:8091"
+manage_takoda_daemon = true
 manage_takoda_supervisor = true
 manage_selenium_node = true
 spawn_per_run_browser_workers = false
