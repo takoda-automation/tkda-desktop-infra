@@ -44,19 +44,10 @@ The machine-readable ORES appliance currently records:
 
 - repository: `ORESoftware/ores-common-desktop-infra`;
 - checkout: `tmp/dev/ores-common-desktop-infra`;
-- status: `awaiting-repository`;
-- revision: `null`.
+- status: `pinned`;
+- revision: `21851fcb6ca59fe4cfe887d882dac78d90548ce4`.
 
-That is a fail-closed migration state. Stable promotion is blocked while `promotion_gates.common_layer_pinned` is false.
+Takoda CI checks out that exact private revision and runs the shared Rust consumer checker before the Takoda-specific Scintilla ownership assertions. Mutable branches or tags are not accepted.
 
-Once the common repository is available, migration must be atomic:
-
-1. pin an exact 40-hex common-layer commit;
-2. change status to `pinned`;
-3. set `common_layer_pinned=true`;
-4. invoke/import the shared validators and lifecycle helpers from that exact checkout;
-5. delete product-local copies of code now owned by the common layer;
-6. keep only product-specific ports, daemon/runtime topology, workers, and native contracts here.
-
-Mutable branches or tags are not acceptable release dependencies.
+`common_desktop_infra_ci_verified` / `common_layer_ci_verified` remain false until that exact cross-org checkout and checker execute successfully with an approved read-only fleet credential. A missing credential is a hard CI failure, not permission to copy the shared implementation locally or fall back to a branch.
 

@@ -33,13 +33,14 @@
     "daemon_lockfile_committed": false,
     "public_ingress_ready": false,
     "scintilla_substrate_in_compose_graph": false,
-    "common_layer_pinned": false
+    "common_layer_pinned": true,
+    "common_layer_ci_verified": false
   },
   "common_layer": {
     "repository": "ORESoftware/ores-common-desktop-infra",
     "checkout_dir": "tmp/dev/ores-common-desktop-infra",
-    "status": "awaiting-repository",
-    "revision": null,
+    "status": "pinned",
+    "revision": "21851fcb6ca59fe4cfe887d882dac78d90548ce4",
     "capabilities": [
       "consumer-validation",
       "loopback-policy",
