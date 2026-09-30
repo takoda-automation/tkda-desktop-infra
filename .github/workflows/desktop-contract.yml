@@ -4,6 +4,7 @@ on:
   pull_request:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -12,16 +13,73 @@ concurrency:
   group: desktop-contract-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  EXPECTED_HEAD: ${{ github.event.pull_request.head.sha || github.sha }}
+  ORES_COMMON_DESKTOP_REVISION: 21851fcb6ca59fe4cfe887d882dac78d90548ce4
+
 jobs:
   validate:
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Check out exact Takoda candidate
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
+          ref: ${{ env.EXPECTED_HEAD }}
           persist-credentials: false
+      - name: Verify exact Takoda candidate
+        shell: bash
+        run: test "$(git rev-parse HEAD)" = "$EXPECTED_HEAD"
+
+      - name: Mint read-only fleet GitHub App token
+        id: app-token
+        if: ${{ vars.FLEET_GITHUB_APP_CLIENT_ID != '' }}
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3
+        with:
+          client-id: ${{ vars.FLEET_GITHUB_APP_CLIENT_ID }}
+          private-key: ${{ secrets.FLEET_GITHUB_APP_PRIVATE_KEY }}
+          owner: ORESoftware
+          repositories: ores-common-desktop-infra
+          permission-contents: read
+
+      - name: Require approved common-layer credential
+        env:
+          COMMON_REPO_TOKEN: ${{ steps.app-token.outputs.token || secrets.FLEET_GITHUB_READ_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -n "$COMMON_REPO_TOKEN" || {
+            echo "Configure the read-only fleet GitHub App credential or FLEET_GITHUB_READ_TOKEN for the private common desktop layer" >&2
+            exit 1
+          }
+
+      - name: Check out exact common desktop layer
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          repository: ORESoftware/ores-common-desktop-infra
+          ref: ${{ env.ORES_COMMON_DESKTOP_REVISION }}
+          path: tmp/dev/ores-common-desktop-infra
+          token: ${{ steps.app-token.outputs.token || secrets.FLEET_GITHUB_READ_TOKEN }}
+          persist-credentials: false
+
+      - name: Verify exact common revision
+        shell: bash
+        run: test "$(git -C tmp/dev/ores-common-desktop-infra rev-parse HEAD)" = "$ORES_COMMON_DESKTOP_REVISION"
+
       - uses: dtolnay/rust-toolchain@4be7066ada62dd38de10e7b70166bc74ed198c30
         with:
           toolchain: 1.88.0
-      - name: Validate Takoda desktop orchestration projection
-        run: cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml contract::tests::repository_contract_is_consistent -- --exact
+
+      - name: Validate through common desktop implementation
+        env:
+          ORES_COMMON_DESKTOP_EXPECTED_REVISION: ${{ env.ORES_COMMON_DESKTOP_REVISION }}
+        run: |
+          cargo run --locked             --manifest-path tmp/dev/ores-common-desktop-infra/daemon/rust/Cargo.toml             --bin ores-common-desktop-consumer-check
+
+      - name: Validate Takoda-specific substrate boundary
+        run: >-
+          cargo test --manifest-path tools/tkda-desktop-tool/Cargo.toml
+          contract::tests::repository_contract_is_consistent -- --exact
+
+      - name: Verify validation did not mutate tracked state
+        run: git diff --exit-code
