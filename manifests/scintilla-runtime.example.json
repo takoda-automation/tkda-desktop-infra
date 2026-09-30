@@ -5,7 +5,9 @@
   "ingress": {
     "command": {
       "program": "/opt/scintilla/ingress/bin/scintilla_ingress",
-      "args": ["foreground"],
+      "args": [
+        "foreground"
+      ],
       "cwd": "/opt/scintilla/ingress",
       "env": {
         "SCINTILLA_LISTEN": "127.0.0.1:8091"
@@ -14,7 +16,9 @@
     "stop": {
       "command": {
         "program": "/opt/scintilla/ingress/bin/scintilla_ingress",
-        "args": ["stop"],
+        "args": [
+          "stop"
+        ],
         "cwd": "/opt/scintilla/ingress"
       },
       "timeout_seconds": 15
@@ -22,6 +26,30 @@
     "release_command": "/opt/scintilla/ingress/bin/scintilla_ingress"
   },
   "workers": [
+    {
+      "id": "takoda-desktop-daemon",
+      "runtime": "rust",
+      "mode": "host",
+      "command": {
+        "program": "/opt/takoda/bin/tkda-desktop-daemon",
+        "args": [],
+        "cwd": "/opt/takoda/runtime",
+        "env": {
+          "TKDA_LAUNCH_SUPERVISOR": "false",
+          "TKDA_LOCAL_SUPERVISOR_URL": "http://127.0.0.1:18088",
+          "TKDA_LOCAL_SUPERVISOR_BIND": "127.0.0.1:18088",
+          "TKDA_LOCAL_CONTROL_BIND": "127.0.0.1:18087",
+          "TKDA_ALLOW_HEADED": "true",
+          "TKDA_AGENT_URL": "wss://api.takoda.dev/v1/agents/connect",
+          "TKDA_AGENT_ID": "replace-at-install-with-device-id",
+          "TKDA_AGENT_TOKEN_FILE": "/opt/takoda/secrets/agent.token",
+          "TKDA_LOCAL_CONTROL_TOKEN_FILE": "/opt/takoda/secrets/local-control.token"
+        }
+      },
+      "stop": {
+        "timeout_seconds": 20
+      }
+    },
     {
       "id": "takoda-main-supervisor",
       "runtime": "rust",
@@ -54,7 +82,9 @@
       "mode": "host",
       "command": {
         "program": "node",
-        "args": ["/opt/takoda/browser-workers/dist/selenium-node.js"],
+        "args": [
+          "/opt/takoda/browser-workers/dist/selenium-node.js"
+        ],
         "cwd": "/opt/takoda/browser-workers",
         "env": {
           "TKDA_CHROMEDRIVER_CMD": "chromedriver",
@@ -75,7 +105,10 @@
     "clients": [
       {
         "kind": "infra",
-        "capabilities": ["runtime.reconcile", "worker.control"]
+        "capabilities": [
+          "runtime.reconcile",
+          "worker.control"
+        ]
       }
     ]
   }
