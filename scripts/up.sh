@@ -10,10 +10,8 @@ source "$ENV_FILE"
 
 : "${SCINTILLA_DESKTOP_INFRA_ROOT:?SCINTILLA_DESKTOP_INFRA_ROOT is required}"
 : "${TKDA_SCINTILLA_RUNTIME_MANIFEST:?TKDA_SCINTILLA_RUNTIME_MANIFEST is required}"
-: "${TKDA_AGENT_URL:?TKDA_AGENT_URL is required}"
-: "${TKDA_AGENT_ID:?TKDA_AGENT_ID is required}"
-: "${TKDA_AGENT_TOKEN_FILE:?TKDA_AGENT_TOKEN_FILE is required}"
 : "${TKDA_LOCAL_CONTROL_TOKEN_FILE:?TKDA_LOCAL_CONTROL_TOKEN_FILE is required}"
+: "${TKDA_DESKTOP_CLI_BIN:?TKDA_DESKTOP_CLI_BIN is required}"
 
 test -x "$SCINTILLA_DESKTOP_INFRA_ROOT/scripts/up.sh" || {
   echo "Scintilla desktop infra is not runnable at $SCINTILLA_DESKTOP_INFRA_ROOT" >&2
@@ -41,17 +39,16 @@ curl --fail --silent http://127.0.0.1:18088/healthz >/dev/null || {
   exit 1
 }
 
-TOKEN="$(tr -d '\r\n' < "$TKDA_LOCAL_CONTROL_TOKEN_FILE")"
-test -n "$TOKEN" || { echo "local control token file is empty" >&2; exit 1; }
 for _ in {1..100}; do
-  if curl --fail --silent -H "Authorization: Bearer $TOKEN"       http://127.0.0.1:18087/v1/status >/dev/null 2>&1; then
+  if TKDA_LOCAL_CONTROL_TOKEN_FILE="$TKDA_LOCAL_CONTROL_TOKEN_FILE" \
+      "$TKDA_DESKTOP_CLI_BIN" --command=status >/dev/null 2>&1; then
     break
   fi
   sleep 0.1
 done
 
-curl --fail --silent -H "Authorization: Bearer $TOKEN"   http://127.0.0.1:18087/v1/status
-echo
+TKDA_LOCAL_CONTROL_TOKEN_FILE="$TKDA_LOCAL_CONTROL_TOKEN_FILE" \
+  "$TKDA_DESKTOP_CLI_BIN" --command=status
 
 if [[ "${TKDA_CLOUDFLARE_AUTO_START:-false}" == "true" ]]; then
   bash "$ROOT/scripts/cloudflare-tunnel.sh" start
