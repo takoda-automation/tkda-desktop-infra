@@ -3,8 +3,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use serde_json::{Value, json};
 use crate::secret::read_private_secret;
+use serde_json::{Value, json};
 
 #[derive(Debug, Clone)]
 pub struct RenderConfig {
@@ -407,10 +407,7 @@ mod tests {
             daemon["command"]["env"]["TKDA_LOCAL_SUPERVISOR_URL"],
             "http://127.0.0.1:18088"
         );
-        assert_eq!(
-            daemon["command"]["env"]["TKDA_LAUNCH_SUPERVISOR"],
-            "false"
-        );
+        assert_eq!(daemon["command"]["env"]["TKDA_LAUNCH_SUPERVISOR"], "false");
         let supervisor = workers
             .iter()
             .find(|v| v["id"] == "takoda-main-supervisor")
