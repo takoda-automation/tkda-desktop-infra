@@ -246,6 +246,43 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         return Err("native common desktop promotion gate cannot be green while unpinned".into());
     }
 
+    let scintilla_example: Value =
+        read_json(root.join("manifests/scintilla-runtime.example.json"))?;
+    let scintilla_workers = scintilla_example
+        .get("workers")
+        .and_then(Value::as_array)
+        .ok_or_else(|| "Scintilla runtime example workers missing".to_owned())?;
+    for required in [
+        "takoda-desktop-daemon",
+        "takoda-main-supervisor",
+        "tkda-selenium-node",
+    ] {
+        if !scintilla_workers
+            .iter()
+            .any(|worker| worker.get("id").and_then(Value::as_str) == Some(required))
+        {
+            return Err(format!(
+                "Scintilla runtime example missing long-lived worker {required}"
+            ));
+        }
+    }
+
+    for script in ["scripts/up.sh", "scripts/down.sh", "scripts/status.sh"] {
+        let source = fs::read_to_string(root.join(script)).map_err(|e| e.to_string())?;
+        for forbidden in [
+            "tkda-daemon.pid",
+            "nohup ",
+            "kill -9",
+            "Authorization: Bearer",
+        ] {
+            if source.contains(forbidden) {
+                return Err(format!(
+                    "{script} reintroduced shell-owned daemon lifecycle or bearer argv: {forbidden}"
+                ));
+            }
+        }
+    }
+
     let policy = fs::read_to_string(root.join(".tkda-desktop.toml")).map_err(|e| e.to_string())?;
     for engine in ["selenium", "playwright", "puppeteer"] {
         if !policy.contains(engine) {
