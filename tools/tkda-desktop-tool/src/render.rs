@@ -4,8 +4,6 @@ use std::{
 };
 
 use serde_json::{Value, json};
-use url::Url;
-
 use crate::secret::read_private_secret;
 
 #[derive(Debug, Clone)]
@@ -189,28 +187,105 @@ fn secure_agent_url_env(key: &str) -> Result<String, String> {
 }
 
 fn secure_agent_url(raw: &str, key: &str) -> Result<String, String> {
-    if raw.len() > 2_048 {
-        return Err(format!("{key} exceeds 2048 characters"));
-    }
-    let url = Url::parse(raw).map_err(|_| format!("{key} is not a valid URL"))?;
-    let host = url
-        .host_str()
-        .ok_or_else(|| format!("{key} is missing a host"))?
-        .trim_start_matches('[')
-        .trim_end_matches(']')
-        .to_ascii_lowercase();
-    let loopback = host == "127.0.0.1" || host == "::1";
-    if (url.scheme() != "wss" && !(url.scheme() == "ws" && loopback))
-        || !url.username().is_empty()
-        || url.password().is_some()
-        || url.query().is_some()
-        || url.fragment().is_some()
+    if raw.is_empty()
+        || raw.len() > 2_048
+        || raw.chars().any(char::is_whitespace)
+        || raw.chars().any(char::is_control)
+        || raw.contains('@')
+        || raw.contains('?')
+        || raw.contains('#')
+        || raw.contains('\\')
     {
-        return Err(format!(
-            "{key} must use wss (or ws on literal loopback) without credentials, query, or fragment"
-        ));
+        return Err(format!("{key} is not a safe agent URL"));
     }
-    Ok(url.to_string())
+
+    let (scheme, rest) = raw
+        .split_once("://")
+        .ok_or_else(|| format!("{key} is not a valid URL"))?;
+    if rest.is_empty() {
+        return Err(format!("{key} is missing an authority"));
+    }
+    let authority = rest.split('/').next().unwrap_or_default();
+    if authority.is_empty() {
+        return Err(format!("{key} is missing a host"));
+    }
+
+    match scheme {
+        "wss" => validate_wss_authority(authority, key)?,
+        "ws" => validate_loopback_ws_authority(authority, key)?,
+        _ => {
+            return Err(format!(
+                "{key} must use wss, or ws only on literal loopback"
+            ));
+        }
+    }
+
+    Ok(raw.to_owned())
+}
+
+fn validate_wss_authority(authority: &str, key: &str) -> Result<(), String> {
+    if authority.starts_with('[') {
+        let closing = authority
+            .find(']')
+            .ok_or_else(|| format!("{key} has malformed IPv6 authority"))?;
+        if closing == 1 {
+            return Err(format!("{key} is missing an IPv6 host"));
+        }
+        let suffix = &authority[closing + 1..];
+        if !suffix.is_empty() {
+            validate_optional_port(suffix, key)?;
+        }
+        return Ok(());
+    }
+
+    let mut parts = authority.rsplitn(2, ':');
+    let last = parts.next().unwrap_or_default();
+    let possible_host = parts.next();
+    if let Some(host) = possible_host {
+        if host.is_empty() {
+            return Err(format!("{key} is missing a host"));
+        }
+        if last.bytes().all(|byte| byte.is_ascii_digit()) {
+            validate_port(last, key)?;
+        } else if authority.matches(':').count() > 1 {
+            return Err(format!("{key} IPv6 hosts must use brackets"));
+        }
+    } else if last.is_empty() {
+        return Err(format!("{key} is missing a host"));
+    }
+    Ok(())
+}
+
+fn validate_loopback_ws_authority(authority: &str, key: &str) -> Result<(), String> {
+    if let Some(port) = authority.strip_prefix("127.0.0.1:") {
+        return validate_port(port, key);
+    }
+    if let Some(port) = authority.strip_prefix("[::1]:") {
+        return validate_port(port, key);
+    }
+    Err(format!(
+        "{key} ws URLs must use literal loopback with an explicit port"
+    ))
+}
+
+fn validate_optional_port(suffix: &str, key: &str) -> Result<(), String> {
+    let port = suffix
+        .strip_prefix(':')
+        .ok_or_else(|| format!("{key} has malformed authority"))?;
+    validate_port(port, key)
+}
+
+fn validate_port(raw: &str, key: &str) -> Result<(), String> {
+    if raw.is_empty() || !raw.bytes().all(|byte| byte.is_ascii_digit()) {
+        return Err(format!("{key} has an invalid port"));
+    }
+    let port = raw
+        .parse::<u16>()
+        .map_err(|_| format!("{key} port is outside 1..=65535"))?;
+    if port == 0 {
+        return Err(format!("{key} port is outside 1..=65535"));
+    }
+    Ok(())
 }
 
 fn private_secret_path(key: &str) -> Result<PathBuf, String> {
