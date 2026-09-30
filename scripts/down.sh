@@ -9,7 +9,11 @@ if [[ -f "$ROOT/scripts/cloudflare-tunnel.sh" ]]; then
   bash "$ROOT/scripts/cloudflare-tunnel.sh" stop || true
 fi
 
-if [[ -f "$ENV_FILE" ]]; then
+if [[ -e "$ENV_FILE" ]]; then
+  [[ -f "$ENV_FILE" && ! -L "$ENV_FILE" ]] || {
+    echo "unsafe desktop env file: $ENV_FILE" >&2
+    exit 1
+  }
   # shellcheck disable=SC1090
   source "$ENV_FILE"
   if [[ -n "${SCINTILLA_DESKTOP_INFRA_ROOT:-}" ]] && [[ -x "$SCINTILLA_DESKTOP_INFRA_ROOT/scripts/down.sh" ]]; then
