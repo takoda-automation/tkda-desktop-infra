@@ -192,7 +192,8 @@ fn secure_agent_url_env(key: &str) -> Result<String, String> {
     let host = url
         .host_str()
         .ok_or_else(|| format!("{key} is missing a host"))?
-        .trim_matches(['[', ']'])
+        .trim_start_matches('[')
+        .trim_end_matches(']')
         .to_ascii_lowercase();
     let loopback = host == "127.0.0.1" || host == "::1";
     if (url.scheme() != "wss" && !(url.scheme() == "ws" && loopback))
