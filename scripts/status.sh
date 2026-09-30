@@ -14,9 +14,10 @@ else
   echo "tkda-main-server desktop supervisor: unavailable"
 fi
 
-TOKEN="$(tr -d '\r\n' < "$TKDA_LOCAL_CONTROL_TOKEN_FILE")"
-if [[ -n "$TOKEN" ]] && curl --fail --silent -H "Authorization: Bearer $TOKEN" http://127.0.0.1:18087/v1/status; then
-  echo
+if [[ -n "${TKDA_DESKTOP_CLI_BIN:-}" ]] \
+  && [[ -x "$TKDA_DESKTOP_CLI_BIN" ]] \
+  && TKDA_LOCAL_CONTROL_TOKEN_FILE="$TKDA_LOCAL_CONTROL_TOKEN_FILE" \
+    "$TKDA_DESKTOP_CLI_BIN" --command=status; then
   echo "tkda-desktop-daemon: healthy (Scintilla-managed)"
 else
   echo "tkda-desktop-daemon: unavailable" >&2
