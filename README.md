@@ -35,16 +35,17 @@ Takoda hosted control plane
           v
   scintilla-desktop-infra desired state
           +---- one local Scintilla BEAM ingress/control process :8091
+          +---- tkda-desktop-daemon :18087
           +---- tkda-main-server desktop supervisor :18088
-          +---- optional local Selenium/ChromeDriver node :9515
+          +---- local Selenium/ChromeDriver node :9515
           +---- host/container support processes
           +---- optional Cloudflare Tunnel
 ```
 
 The important ownership boundary is deliberate:
 
-- **Scintilla owns long-lived process/container lifecycle on the laptop.**
-- **`tkda-desktop-daemon` is the Takoda-facing machine-local control API and Scintilla adapter.**
+- **Scintilla owns all long-lived Takoda process/container lifecycle on the laptop, including `tkda-desktop-daemon`, `tkda-main-server`, and the Selenium node.**
+- **`tkda-desktop-daemon` is the Takoda-facing machine-local control API and Scintilla adapter; shell scripts do not own its PID.**
 - **`tkda-main-server` in `desktop` execution role owns Takoda run state and per-run worker children.**
 - **Takoda browser workers own browser sessions.**
 - **CLI and GUI clients never launch browsers, workers, Scintilla, containers, or tunnels directly.**
@@ -67,7 +68,7 @@ Headed and headless execution are separate policy choices. Browser-control ports
 
 `tkda-desktop-daemon` is the only local API Takoda clients need. Hosted leases and local CLI/GUI requests converge on the same run supervisor so cancellation, retries, capability matching, browser lifecycle, telemetry, and resource limits do not diverge by caller.
 
-The daemon reconciles the Scintilla substrate before accepting local execution. Normal installations should set `TKDA_LAUNCH_SUPERVISOR=false`: the Takoda daemon discovers/uses `tkda-main-server` at `127.0.0.1:18088`, while Scintilla owns that process. The legacy direct `Command::new(tkda-main-server)` path remains only as a development/compatibility fallback until the Scintilla adapter lands in the daemon.
+The daemon and main supervisor are both declared in the Scintilla desired-state manifest. The daemon runs with `TKDA_LAUNCH_SUPERVISOR=false` and discovers/uses `tkda-main-server` at `127.0.0.1:18088`; Scintilla owns both long-lived processes. `scripts/up.sh`, `down.sh`, and `status.sh` never create or trust a daemon PID file. The legacy direct `Command::new(tkda-main-server)` path remains development/compatibility-only.
 
 ## Contracts
 
@@ -104,6 +105,7 @@ Render the Scintilla desired-state manifest through the repository's Rust toolin
 ```sh
 export SCINTILLA_INGRESS_BIN=/opt/scintilla/ingress/bin/scintilla_ingress
 export SCINTILLA_INGRESS_ROOT=/opt/scintilla/ingress
+export TKDA_DESKTOP_DAEMON_BIN="$PWD/.desktop/bin/tkda-desktop-daemon"
 export TKDA_MAIN_SERVER_BIN="$PWD/.desktop/bin/tkda-main-server"
 export TKDA_BROWSER_WORKER_ENTRY="$PWD/.desktop/src/browser-workers/dist/worker.js"
 export TKDA_SELENIUM_NODE_ENTRY="$PWD/.desktop/src/browser-workers/dist/selenium-node.js"
@@ -111,7 +113,10 @@ export TKDA_CHROMEDRIVER_BIN=/absolute/path/to/chromedriver
 export TKDA_PYTHON_WORKER_ENTRY="$PWD/.desktop/src/main-supervisor/workers/python/tkda_worker.py"
 export TKDA_RUST_WORKER_BIN="$PWD/.desktop/bin/tkda-rust-worker"
 export TKDA_GO_WORKER_BIN="$PWD/.desktop/bin/tkda-go-worker"
+export TKDA_AGENT_URL='wss://api.takoda.dev/v1/agents/connect'
 export TKDA_AGENT_ID=my-laptop
+export TKDA_AGENT_TOKEN_FILE="$HOME/.config/takoda/agent.token"
+export TKDA_LOCAL_CONTROL_TOKEN_FILE="$PWD/.desktop/config/local-control.token"
 export TKDA_ALLOW_HEADED=true
 export TKDA_SCINTILLA_RUNTIME_MANIFEST="$PWD/.desktop/runtime.scintilla.json"
 
@@ -120,17 +125,9 @@ cargo run --quiet --release \
   --bin tkda-desktop-render
 ```
 
-The renderer rejects unsafe agent identifiers, symlinked execution files, non-absolute execution paths, and arbitrary Node/Python command paths.
+The renderer rejects unsafe agent identifiers, insecure remote agent URLs, symlinked execution/secret files, non-absolute execution paths, and arbitrary Node/Python command paths. Plain `ws://` is accepted only on literal loopback; normal hosted control uses `wss://`.
 
-Then place the required cloud-agent values and manifest path in `.desktop/env`:
-
-```sh
-export TKDA_AGENT_URL='wss://api.takoda.dev/v1/agents/connect'
-export TKDA_AGENT_ID='my-laptop'
-export TKDA_AGENT_TOKEN_FILE="$HOME/.config/takoda/agent.token"
-export TKDA_ALLOW_HEADED=true
-export TKDA_SCINTILLA_RUNTIME_MANIFEST="$PWD/.desktop/runtime.scintilla.json"
-```
+The renderer admits the outbound agent URL and both credential **file paths** before writing desired state. Agent/local-control secrets remain in mode-0600 files and are never embedded into the manifest.
 
 Start and inspect the full local stack:
 
@@ -139,6 +136,8 @@ Start and inspect the full local stack:
 ./scripts/status.sh
 .desktop/bin/tkda-desktop-cli --command=doctor
 ```
+
+These wrappers are orchestration clients only. Scintilla starts/stops the daemon, supervisor, and Selenium node. Status checks use the Rust desktop CLI and token-file boundary, so bearer credentials are not copied into shell variables or curl argv.
 
 Optional direct remote browser dispatch is enabled with a remotely managed Cloudflare Tunnel token file and `TKDA_CLOUDFLARE_AUTO_START=true`. The tunnel is deliberately outside ORES Compose lifecycle. Use `bash ./scripts/cloudflare-tunnel.sh {start|stop|status|restart}` for explicit control.
 
