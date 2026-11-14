@@ -8,7 +8,9 @@ ENV_FILE="${TKDA_DESKTOP_ENV:-$STATE/env}"
 # shellcheck disable=SC1090
 source "$ENV_FILE"
 
-if curl --fail --silent http://127.0.0.1:18088/healthz >/dev/null 2>&1; then
+# A wedged supervisor must not hang operator status diagnostics indefinitely.
+if curl --fail --silent --connect-timeout 2 --max-time 4 \
+    http://127.0.0.1:18088/healthz >/dev/null 2>&1; then
   echo "tkda-main-server desktop supervisor: healthy"
 else
   echo "tkda-main-server desktop supervisor: unavailable"

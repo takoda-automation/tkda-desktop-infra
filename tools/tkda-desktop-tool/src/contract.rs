@@ -296,10 +296,13 @@ pub fn validate_repository_contract(root: &Path) -> Result<(), String> {
         return Err("desktop security policy drifted".into());
     }
 
-    let bootstrap = fs::read_to_string(root.join("scripts/bootstrap.sh")).map_err(|e| e.to_string())?;
+    let bootstrap =
+        fs::read_to_string(root.join("scripts/bootstrap.sh")).map_err(|e| e.to_string())?;
     for required in ["umask 077", "chmod 0700", "chmod 0600 \"$STATE/env\""] {
         if !bootstrap.contains(required) {
-            return Err(format!("bootstrap private-state hardening missing: {required}"));
+            return Err(format!(
+                "bootstrap private-state hardening missing: {required}"
+            ));
         }
     }
 
